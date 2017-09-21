@@ -137,6 +137,7 @@ void getsym(void)
 			sym = SYM_LES;     // <
 		}
 	}
+
 	else
 	{ // other tokens
 		i = NSYM;
@@ -144,8 +145,29 @@ void getsym(void)
 		while (csym[i--] != ch);
 		if (++i)
 		{
-			sym = ssym[i];
-			getch();
+			if (ch == '/') {
+				getch();
+				case(ch) {
+					'/':{//line
+						while (ch != '\n')
+							getch();
+						getch();//getch at the beginning of the next line as other "else"
+					};break;
+					'*':{//block
+						while (true) {
+							getch();
+							if (ch == '*')
+								if (getch() == '/')//break and get the next ch
+									break;
+						}
+						getch();
+					};break;
+				default:
+					sym = ssym[i];//we have already got one ch at "if" 
+					//getch();
+				}
+			}
+			
 		}
 		else
 		{
