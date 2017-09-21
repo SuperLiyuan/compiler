@@ -147,13 +147,13 @@ void getsym(void)
 		{
 			if (ch == '/') {
 				getch();
-				case(ch) {
-					'/':{//line
+				switch(ch) {
+					case '/':{//line
 						while (ch != '\n')
 							getch();
 						getch();//getch at the beginning of the next line as other "else"
 					};break;
-					'*':{//block
+					case '*':{//block
 						while (true) {
 							getch();
 							if (ch == '*')
