@@ -194,11 +194,11 @@ typedef struct
 
 FILE* infile;
 
-typedef struct cxnode {
+typedef struct cxnode {    //for saving series of cx in or_expr and and_expr
 	int cx;
 	struct cxnode *next;
 }*cxlist;
 
-int factflag = 0;
+int factflag = 0;  //used in top_expr
 
 // EOF PL0.h
