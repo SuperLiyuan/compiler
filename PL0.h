@@ -121,7 +121,7 @@ char* err_msg[] =
 	/* 28 */    "Incomplete 'for' statement.",
 	/* 29 */    "",
 	/* 30 */    "",
-	/* 31 */    "Empty file.",
+	/* 31 */    "Incomplete program.",
 	/* 32 */    "There are too many levels."
 };
 

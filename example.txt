@@ -1,0 +1,10 @@
+var i,j;
+procedure p;
+begin
+  i:=0||!0;
+end;
+
+begin
+  call p;
+  i := 2;
+end.
