@@ -878,27 +878,7 @@ void statement(symset fsys)
 	error(28);  //Incomplete 'for' statement.
 	getsym();
 	}
-	cx1 = cx;   //come back to here after loop
-	top_expr(set);
-	cx2 = cx;
-	gen(JPC, 0, 0);
-	if(sym == SYM_SEMICOLON)
-	{
-	getsym();
-	}
-	else
-	{
-	error(28);  //Incomplete 'for' statement.
-	}
-	top_expr(set);
-	if(sym == SYM_RPAREN)
-	{
-	getsym();
-	}
-	else
-	{
-	error(22);  //missing ')'
-	}
+
 	}*/
 	else if (sym == SYM_WHILE)
 	{ // while statement
