@@ -10,6 +10,8 @@
 #include "PL0.h"
 #include "set.c"
 
+
+
 //////////////////////////////////////////////////////////////////////
 // print error message.
 void error(int n)
@@ -247,7 +249,7 @@ void test(symset s1, symset s2, int n)
   //////////////////////////////////////////////////////////////////////
 int dx;  // data allocation index
 
-		 // enter object(constant, variable or procedre) into table.
+ // enter object(constant, variable or procedre) into table.
 void enter(int kind)
 {
 	mask* mk;
@@ -379,6 +381,7 @@ void factor(symset fsys)
 					break;
 				case ID_PROCEDURE:
 					error(21); // Procedure identifier can not be in an expression.
+					//待改
 					break;
 				} // switch
 			}
@@ -394,7 +397,7 @@ void factor(symset fsys)
 			gen(LIT, 0, num);
 			getsym();
 		}
-		else if (sym == SYM_LPAREN)
+		else if (sym == SYM_LPAREN)//左括号
 		{
 			getsym();
 			set = uniteset(createset(SYM_RPAREN, SYM_NULL), fsys);
@@ -445,7 +448,7 @@ void term(symset fsys)
 
 	set = uniteset(fsys, createset(SYM_TIMES, SYM_SLASH, SYM_MOD, SYM_NULL));  //2017.10.11
 	factor(set);
-	while (sym == SYM_TIMES || sym == SYM_SLASH || sym == SYM_MOD)
+	while (sym == SYM_TIMES || sym == SYM_SLASH || sym == SYM_MOD)//乘除取余
 	{
 		mulop = sym;
 		getsym();
@@ -464,7 +467,7 @@ void term(symset fsys)
 		}
 	} // while
 	destroyset(set);
-} // term
+} // term//x//x*y
 
   //////////////////////////////////////////////////////////////////////
 void expression(symset fsys)
@@ -492,7 +495,7 @@ void expression(symset fsys)
 	} // while
 
 	destroyset(set);
-} // expression
+} // expression//x+y
 
   //////////////////////////////////////////////////////////////////////
 void rel_expr(symset fsys) //condition
@@ -737,6 +740,7 @@ void top_expr(symset fsys)              //2017.10.26
 void statement(symset fsys)
 {
 	int i, cx1, cx2, cx3;
+	int temp,tmpnum;
 	symset set1, set;
 
 	if (inset(sym, facbegsys))        //2017.10.26
@@ -842,10 +846,10 @@ void statement(symset fsys)
 		set = uniteset(set1, fsys);
 		statement(set);
 		while (inset(sym, statbegsys) || sym == SYM_SEMICOLON)     //2017.10.25
-		{
+		{//sys在不在begin的后缀中
 			if (sym == SYM_SEMICOLON)
 			{
-				error(26);   //redundant ';'
+				error(26);   //redundant ';' which will cause "begin;"
 				getsym();
 			}
 			statement(set);
@@ -914,6 +918,22 @@ void statement(symset fsys)
 		{
 			error(10);     // ';'expected
 		}
+	}
+	else if (sym == SYM_RET) {//把值放在栈顶
+		getsym();
+		if(sym==SYM_NUMBER)
+			gen(LIT, 0,num);
+		else if (sym == SYM_IDENTIFIER) {
+			if ((temp = position(id))) {//能找到位置temp（此时可加报错）
+				tmpnum = temp.value;
+				gen(LOD, 0, tmpnum);
+			}
+		}
+		else if (sym == SYM_SEMICOLON) {//return; 则把0放栈上
+			gen(LIT, 0, 0);
+		}
+		else if(sym==)
+
 	}
 	test(fsys, phi, 19);
 } // statement
@@ -984,6 +1004,7 @@ void block(symset fsys)
 		block_dx = dx; //save dx before handling procedure call!
 		while (sym == SYM_PROCEDURE)
 		{ // procedure declarations
+			//procedure x;
 			getsym();
 			if (sym == SYM_IDENTIFIER)
 			{
@@ -995,7 +1016,7 @@ void block(symset fsys)
 				error(4); // There must be an identifier to follow 'const', 'var', or 'procedure'.
 			}
 
-			if (sym == SYM_SEMICOLON)
+			if (sym == SYM_SEMICOLON)//;
 			{
 				getsym();
 			}
