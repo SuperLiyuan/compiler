@@ -634,10 +634,10 @@ void and_expr(symset fsys)
 		{
 			p = cx0;
 			cx0 = cx0->next;
-			delete p;
+			free(p);
 			code[cx0->cx].a = cx;
 		}
-		delete cx0;
+		free(cx0);
 		gen(LIT, 0, 0);        //if JPC, restore 0
 		code[cx1].a = cx;
 	}
@@ -678,10 +678,10 @@ void or_expr(symset fsys)
 		{
 			p = cx0;
 			cx0 = cx0->next;
-			delete p;
+			free(p);
 			code[cx0->cx].a = cx;
 		}
-		delete cx0;
+		free(cx0);
 		gen(LIT, 0, 1);        //if JPC, restore 1
 		code[cx1].a = cx;
 	}
