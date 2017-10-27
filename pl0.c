@@ -846,8 +846,8 @@ void statement(symset fsys)
 		set = uniteset(set1, fsys);
 		statement(set);
 		while (inset(sym, statbegsys) || sym == SYM_SEMICOLON)     //2017.10.25
-		{//sys在不在begin的后缀中
-			if (sym == SYM_SEMICOLON)
+		{//sys在不在statement的前缀中,while true, there are other more statements before 'end'
+			if (sym == SYM_SEMICOLON)  //this is illegal, just for reporting error
 			{
 				error(26);   //redundant ';' which will cause "begin;"
 				getsym();
