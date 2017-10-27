@@ -178,12 +178,12 @@ void getsym(void)
 		}
 		else sym = SYM_SLASH;
 	}
-	/*else if(ch == -1)
+	else if(ch == -1)
 	{
-	error(31); //empty file
+	error(31); //incomplete program
 	exit(1);
 	}
-	else if (ch == '-')
+	/*else if (ch == '-')
 	{
 	getch();
 	if (ch == '('||isalpha(ch)||isdigit(ch))
