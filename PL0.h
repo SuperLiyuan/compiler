@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define NRW        14     // number of reserved words
+#define NRW        15     // number of reserved words
 #define TXMAX      500    // length of identifier table
 #define MAXNUMLEN  14     // maximum number of digits in numbers
 #define NSYM       13     // maximum number of symbols in array ssym and csym
@@ -56,7 +56,8 @@ enum symtype
 	SYM_ELSE,               //2017.10.22
 	SYM_BITNOT,             //2017.10.24
 	SYM_EXIT,               //2017.10.25
-	SYM_FOR
+	SYM_FOR,
+	SYM_RET
 };
 
 enum idtype
@@ -137,6 +138,7 @@ int  err;
 int  cx;         // index of current instruction to be generated.
 int  level = 0;
 int  tx = 0;
+int FLAG=0;		//有返回值记为1
 
 char line[80];
 
@@ -147,14 +149,14 @@ char* word[NRW + 1] =
 	"", /* place holder */
 	"begin", "call", "const", "do", "end","if",
 	"odd", "procedure", "then", "var", "while",
-	"else", "exit", "for"   //2017.10.22 , 2017.10.25
+	"else", "exit", "for","ret" //2017.10.22 , 2017.10.25
 };
 
 int wsym[NRW + 1] =
 {
 	SYM_NULL, SYM_BEGIN, SYM_CALL, SYM_CONST, SYM_DO, SYM_END,
 	SYM_IF, SYM_ODD, SYM_PROCEDURE, SYM_THEN, SYM_VAR, SYM_WHILE,
-	SYM_ELSE, SYM_EXIT, SYM_FOR
+	SYM_ELSE, SYM_EXIT, SYM_FOR,SYM_RET
 };
 
 int ssym[NSYM + 1] =
@@ -180,17 +182,22 @@ typedef struct
 	char name[MAXIDLEN + 1];
 	int  kind;
 	int  value;
+	//int pron;
+	int FLAG;//空间要跟mask的一样
 } comtab;
 
-comtab table[TXMAX];
+comtab table[TXMAX];//常量，有常量变量过程
 
 typedef struct
 {
 	char  name[MAXIDLEN + 1];
+
 	int   kind;
 	short level;
 	short address;
-} mask;
+	short prodn;
+	short FLAG;//返回值的有无
+} mask;//变量(空间与comtab一样）
 
 FILE* infile;
 
