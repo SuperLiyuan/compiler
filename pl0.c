@@ -865,45 +865,110 @@ void statement(symset fsys)
 			error(17); // ';' or 'end' expected.
 		}
 	}
-	/*else if (sym == SYM_FOR)  //2017.10.25
+	else if (sym == SYM_FOR)  //2017.10.25
 	{ // for statement
-	getsym();
-	if( sym != SYM_LPAREN)
-	{
-	error(16);   // '(' expected
-	}
-	getsym();
-	set1 = createset(SYM_RPAREN, SYM_NULL);
-	set = uniteset(set1, fsys);
-	statement(set);
-	if(sym == SYM_RPAREN)
-	{
-	error(28);  //Incomplete 'for' statement.
-	getsym();
-	}
+	    int i;
 
-	}*/
+	    getsym();
+	    if( sym != SYM_LPAREN)
+	    {
+	        error(16);   // '(' expected
+	    }
+	    else
+        {
+            getsym();
+            set1 = createset(SYM_SEMICOLON, SYM_RPAREN, SYM_NULL);
+	        set = uniteset(set1, fsys);
+	        top_expr(set);
+	        if(sym != SYM_SEMICOLON)
+	        {
+                error(10);   //';' expected
+	            test(fsys,set1,28);   //Incomplete 'for' statement.
+	        }
+	        else
+            {
+                getsym();
+                gen(POP, 0, 0);
+                cx1 = cx;  //come back here after loop
+                top_expr(set);
+                if(sym != SYM_SEMICOLON)
+	            {
+                    error(10);   //';' expected
+	                test(fsys,set1,28);    //Incomplete 'for' statement.
+                }
+                else
+                {
+                    getsym();
+
+                    cx2 = cx;  //if false, skip loop
+                    gen(JPC, 0, 0);
+
+                    cx3 = cx;  //beginning of codes that need move
+                    top_expr(set);
+                    if(sym == SYM_RPAREN)
+                    {
+                        getsym();
+                    }
+                    else
+                    {
+                        error(22);
+                    }
+                    destroyset(set);
+                    destroyset(set1);
+                    gen(POP, 0, 0);
+
+                    instruction temp[CXMAX];
+                    for(i = cx3; i<cx; i++)
+                    {
+                        temp[i-cx3]=code[i];
+                    }
+                    cx = cx3;
+                    cx3 = i-cx3; //the length of temp
+                    statement(fsys);
+                    for(i = 0; i<cx3; i++)
+                    {
+                        code[cx++]=temp[i];
+                    }
+                    cx1 = cx1-cx;     //offset
+                    gen(JMP, 0, cx1); //come back to condition
+                    code[cx2].a = cx-cx2; //destination of false condition
+                }
+            }
+        }
+	}
 	else if (sym == SYM_WHILE)
 	{ // while statement
 		cx1 = cx;
+
 		getsym();
-		set1 = createset(SYM_DO, SYM_NULL);
+		if(sym == SYM_LPAREN)
+		{
+		    getsym();
+		}
+		else
+        {
+            error(16);   //'(' expected
+        }
+
+		set1 = createset(SYM_RPAREN, SYM_NULL);
 		set = uniteset(set1, fsys);
-		or_expr(set);//condition(set);
+		top_expr(set);//condition(set);
 		destroyset(set1);
 		destroyset(set);
+
 		cx2 = cx;
 		gen(JPC, 0, 0);
-		if (sym == SYM_DO)
+		if (sym == SYM_RPAREN)
 		{
 			getsym();
 		}
 		else
 		{
-			error(18); // 'do' expected.
+			error(22); // missing ')'
 		}
+
 		statement(fsys);
-		gen(JMP, 0, cx1);
+		gen(JMP, 0, cx1-cx);
 		code[cx2].a = cx-cx2;
 	}
 	else if (sym == SYM_EXIT)
@@ -919,7 +984,7 @@ void statement(symset fsys)
 			error(10);     // ';'expected
 		}
 	}
-	else if (sym == SYM_RET) {//把值放在栈顶
+	/*else if (sym == SYM_RET) {//把值放在栈顶
 		getsym();
 		if(sym==SYM_NUMBER)
 			gen(LIT, 0,num);
@@ -934,7 +999,7 @@ void statement(symset fsys)
 		}
 		else if(sym==)
 
-	}
+	}*/
 	test(fsys, phi, 19);
 } // statement
 
@@ -1218,11 +1283,11 @@ void interpret()
 			top += i.a;
 			break;
 		case JMP:
-			pc += i.a;              //2017.11.2
+			pc += i.a-1;        //2017.11.2
 			break;
 		case JPC:
 			if (stack[top] == 0)
-				pc += i.a;          //2017.11.2
+				pc += i.a-1;         //2017.11.2
 			top--;
 			break;
 		case EXT:                      //2017.10.25
