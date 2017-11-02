@@ -635,11 +635,11 @@ void and_expr(symset fsys)
 			p = cx0;
 			cx0 = cx0->next;
 			free(p);
-			code[cx0->cx].a = cx;
+			code[cx0->cx].a = cx-(cx0->cx);
 		}
 		free(cx0);
 		gen(LIT, 0, 0);        //if JPC, restore 0
-		code[cx1].a = cx;
+		code[cx1].a = cx-cx1;
 	}
 	destroyset(set);
 }
@@ -679,11 +679,11 @@ void or_expr(symset fsys)
 			p = cx0;
 			cx0 = cx0->next;
 			free(p);
-			code[cx0->cx].a = cx;
+			code[cx0->cx].a = cx-(cx0->cx);
 		}
 		free(cx0);
 		gen(LIT, 0, 1);        //if JPC, restore 1
-		code[cx1].a = cx;
+		code[cx1].a = cx-cx1;
 	}
 
 	destroyset(set);
@@ -823,15 +823,15 @@ void statement(symset fsys)
 		if (sym == SYM_ELSE)                         //2017.10.22
 		{
 			gen(JMP, 0, 0);
-			code[cx1].a = cx;
+			code[cx1].a = cx-cx1;
 			cx1 = cx - 1;          //cx1 = JMP,0,0
 			getsym();
 			statement(fsys);
-			code[cx1].a = cx;
+			code[cx1].a = cx-cx1;
 		}
 		else if (inset(sym, statbegsys))
 		{
-			code[cx1].a = cx;     //cx1 = JPC,0,0
+			code[cx1].a = cx-cx1;     //cx1 = JPC,0,0
 		}
 	}
 	else if (sym == SYM_ELSE)
@@ -904,7 +904,7 @@ void statement(symset fsys)
 		}
 		statement(fsys);
 		gen(JMP, 0, cx1);
-		code[cx2].a = cx;
+		code[cx2].a = cx-cx2;
 	}
 	else if (sym == SYM_EXIT)
 	{ //exit;
@@ -1057,7 +1057,7 @@ void block(symset fsys)
 		destroyset(set);
 	} while (inset(sym, declbegsys));
 
-	code[mk->address].a = cx;
+	code[mk->address].a = cx-(mk->address);
 	mk->address = cx;
 	cx0 = cx;
 	gen(INT, 0, block_dx);
@@ -1218,11 +1218,11 @@ void interpret()
 			top += i.a;
 			break;
 		case JMP:
-			pc = i.a;
+			pc += i.a;              //2017.11.2
 			break;
 		case JPC:
 			if (stack[top] == 0)
-				pc = i.a;
+				pc += i.a;          //2017.11.2
 			top--;
 			break;
 		case EXT:                      //2017.10.25
