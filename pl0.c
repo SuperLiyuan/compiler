@@ -180,12 +180,12 @@ void getsym(void)
 		}
 		else sym = SYM_SLASH;
 	}
-	/*else if(ch == -1)
+	else if(ch == -1)
 	{
-	error(31); //empty file
+	error(31); //incomplete program
 	exit(1);
 	}
-	else if (ch == '-')
+	/*else if (ch == '-')
 	{
 	getch();
 	if (ch == '('||isalpha(ch)||isdigit(ch))
@@ -292,7 +292,7 @@ int position(char* id)
 
   //////////////////////////////////////////////////////////////////////
 void constdeclaration()
-{//a=1;
+{
 	if (sym == SYM_IDENTIFIER)
 	{
 		getsym();
@@ -380,9 +380,8 @@ void factor(symset fsys)
 					gen(LOD, level - mk->level, mk->address);
 					break;
 				case ID_PROCEDURE:
-					mask* mk;
-					mk = (mask*)table[i];
-					gen(CAL, level - mk->level, mk->address);
+					error(21); // Procedure identifier can not be in an expression.
+					//待改
 					break;
 				} // switch
 			}
@@ -635,12 +634,12 @@ void and_expr(symset fsys)
 		{
 			p = cx0;
 			cx0 = cx0->next;
-			delete p;
-			code[cx0->cx].a = cx;
+			free(p);
+			code[cx0->cx].a = cx-(cx0->cx);
 		}
-		delete cx0;
+		free(cx0);
 		gen(LIT, 0, 0);        //if JPC, restore 0
-		code[cx1].a = cx;
+		code[cx1].a = cx-cx1;
 	}
 	destroyset(set);
 }
@@ -679,12 +678,12 @@ void or_expr(symset fsys)
 		{
 			p = cx0;
 			cx0 = cx0->next;
-			delete p;
-			code[cx0->cx].a = cx;
+			free(p);
+			code[cx0->cx].a = cx-(cx0->cx);
 		}
-		delete cx0;
+		free(cx0);
 		gen(LIT, 0, 1);        //if JPC, restore 1
-		code[cx1].a = cx;
+		code[cx1].a = cx-cx1;
 	}
 
 	destroyset(set);
@@ -771,7 +770,7 @@ void statement(symset fsys)
 				error(11); // Undeclared identifier.
 			}
 			else if (table[i].kind == ID_PROCEDURE)
-			{//11.2
+			{
 				mask* mk;
 				mk = (mask*)&table[i];
 				gen(CAL, level - mk->level, mk->address);
@@ -789,7 +788,7 @@ void statement(symset fsys)
 		else if (sym != SYM_RPAREN)            //2017.10.25
 		{
 			error(10);    // ';'expected
-		}/*****************************************/
+		}
 	}
 	else if (sym == SYM_IF)
 	{ // if statement
@@ -824,15 +823,15 @@ void statement(symset fsys)
 		if (sym == SYM_ELSE)                         //2017.10.22
 		{
 			gen(JMP, 0, 0);
-			code[cx1].a = cx;
+			code[cx1].a = cx-cx1;
 			cx1 = cx - 1;          //cx1 = JMP,0,0
 			getsym();
 			statement(fsys);
-			code[cx1].a = cx;
+			code[cx1].a = cx-cx1;
 		}
 		else if (inset(sym, statbegsys))
 		{
-			code[cx1].a = cx;     //cx1 = JPC,0,0
+			code[cx1].a = cx-cx1;     //cx1 = JPC,0,0
 		}
 	}
 	else if (sym == SYM_ELSE)
@@ -847,8 +846,8 @@ void statement(symset fsys)
 		set = uniteset(set1, fsys);
 		statement(set);
 		while (inset(sym, statbegsys) || sym == SYM_SEMICOLON)     //2017.10.25
-		{//sys在不在begin的后缀中
-			if (sym == SYM_SEMICOLON)
+		{//sys在不在statement的前缀中,while true, there are other more statements before 'end'
+			if (sym == SYM_SEMICOLON)  //this is illegal, just for reporting error
 			{
 				error(26);   //redundant ';' which will cause "begin;"
 				getsym();
@@ -866,46 +865,111 @@ void statement(symset fsys)
 			error(17); // ';' or 'end' expected.
 		}
 	}
-	/*else if (sym == SYM_FOR)  //2017.10.25
+	else if (sym == SYM_FOR)  //2017.10.25
 	{ // for statement
-	getsym();
-	if( sym != SYM_LPAREN)
-	{
-	error(16);   // '(' expected
-	}
-	getsym();
-	set1 = createset(SYM_RPAREN, SYM_NULL);
-	set = uniteset(set1, fsys);
-	statement(set);
-	if(sym == SYM_RPAREN)
-	{
-	error(28);  //Incomplete 'for' statement.
-	getsym();
-	}
+	    int i;
 
-	}*/
+	    getsym();
+	    if( sym != SYM_LPAREN)
+	    {
+	        error(16);   // '(' expected
+	    }
+	    else
+        {
+            getsym();
+            set1 = createset(SYM_SEMICOLON, SYM_RPAREN, SYM_NULL);
+	        set = uniteset(set1, fsys);
+	        top_expr(set);
+	        if(sym != SYM_SEMICOLON)
+	        {
+                error(10);   //';' expected
+	            test(fsys,set1,28);   //Incomplete 'for' statement.
+	        }
+	        else
+            {
+                getsym();
+                gen(POP, 0, 0);
+                cx1 = cx;  //come back here after loop
+                top_expr(set);
+                if(sym != SYM_SEMICOLON)
+	            {
+                    error(10);   //';' expected
+	                test(fsys,set1,28);    //Incomplete 'for' statement.
+                }
+                else
+                {
+                    getsym();
+
+                    cx2 = cx;  //if false, skip loop
+                    gen(JPC, 0, 0);
+
+                    cx3 = cx;  //beginning of codes that need move
+                    top_expr(set);
+                    if(sym == SYM_RPAREN)
+                    {
+                        getsym();
+                    }
+                    else
+                    {
+                        error(22);
+                    }
+                    destroyset(set);
+                    destroyset(set1);
+                    gen(POP, 0, 0);
+
+                    instruction temp[CXMAX];
+                    for(i = cx3; i<cx; i++)
+                    {
+                        temp[i-cx3]=code[i];
+                    }
+                    cx = cx3;
+                    cx3 = i-cx3; //the length of temp
+                    statement(fsys);
+                    for(i = 0; i<cx3; i++)
+                    {
+                        code[cx++]=temp[i];
+                    }
+                    cx1 = cx1-cx;     //offset
+                    gen(JMP, 0, cx1); //come back to condition
+                    code[cx2].a = cx-cx2; //destination of false condition
+                }
+            }
+        }
+	}
 	else if (sym == SYM_WHILE)
 	{ // while statement
 		cx1 = cx;
+
 		getsym();
-		set1 = createset(SYM_DO, SYM_NULL);
+		if(sym == SYM_LPAREN)
+		{
+		    getsym();
+		}
+		else
+        {
+            error(16);   //'(' expected
+        }
+
+		set1 = createset(SYM_RPAREN, SYM_NULL);
 		set = uniteset(set1, fsys);
-		or_expr(set);//condition(set);
+		top_expr(set);//condition(set);
 		destroyset(set1);
 		destroyset(set);
+
 		cx2 = cx;
 		gen(JPC, 0, 0);
-		if (sym == SYM_DO)
+		if (sym == SYM_RPAREN)
 		{
 			getsym();
 		}
 		else
 		{
-			error(18); // 'do' expected.
+			error(22); // missing ')'
 		}
+
 		statement(fsys);
-		gen(JMP, 0, cx1);
-		code[cx2].a = cx;
+		gen(JMP, 0, cx1-cx);
+		code[cx2].a = cx-cx2;
 	}
 	else if (sym == SYM_EXIT)
 	{ //exit;
@@ -920,21 +984,22 @@ void statement(symset fsys)
 			error(10);     // ';'expected
 		}
 	}
-	else if (sym == SYM_RET) {
+	/*else if (sym == SYM_RET) {//把值放在栈顶
 		getsym();
-		if (sym == SYM_SEMICOLON) {//return; 则把0放在被调用的栈顶，然后再放到原栈栈顶
+		if(sym==SYM_NUMBER)
+			gen(LIT, 0,num);
+		else if (sym == SYM_IDENTIFIER) {
+			if ((temp = position(id))) {//能找到位置temp（此时可加报错）
+				tmpnum = temp.value;
+				gen(LOD, 0, tmpnum);
+			}
+		}
+		else if (sym == SYM_SEMICOLON) {//return; 则把0放栈上
 			gen(LIT, 0, 0);
-			gen(OPR, 0, OPR_RET);
 		}
-		else {//return 1;return 1+x;return fact(n-1);
-			expression();//调用后的结果存在栈顶
-			gen(OPR, 0, OPR_RET);
+		else if(sym==)
 
-		}
-
-		//else if(sym==//return (n-1)*fact(n-1)待写
-		
-	}
+	}*/
 	test(fsys, phi, 19);
 } // statement
 
@@ -1057,7 +1122,7 @@ void block(symset fsys)
 		destroyset(set);
 	} while (inset(sym, declbegsys));
 
-	code[mk->address].a = cx;
+	code[mk->address].a = cx-(mk->address);
 	mk->address = cx;
 	cx0 = cx;
 	gen(INT, 0, block_dx);
@@ -1109,9 +1174,8 @@ void interpret()
 			switch (i.a) // operator
 			{
 			case OPR_RET:
-				stack[b] = stack[top];//把栈顶的返回值放到栈基址
 				top = b - 1;
-				pc = stack[top + 3];//返回地址
+				pc = stack[top + 3];
 				b = stack[top + 2];
 				break;
 			case OPR_NOT: //2017-09-24
@@ -1219,11 +1283,11 @@ void interpret()
 			top += i.a;
 			break;
 		case JMP:
-			pc = i.a;
+			pc += i.a-1;        //2017.11.2
 			break;
 		case JPC:
 			if (stack[top] == 0)
-				pc = i.a;
+				pc += i.a-1;         //2017.11.2
 			top--;
 			break;
 		case EXT:                      //2017.10.25

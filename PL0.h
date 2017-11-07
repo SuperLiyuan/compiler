@@ -138,7 +138,7 @@ int  err;
 int  cx;         // index of current instruction to be generated.
 int  level = 0;
 int  tx = 0;
-//int FLAG=0;		//有返回值记为1
+int FLAG=0;		//有返回值记为1
 
 char line[80];
 
@@ -149,7 +149,7 @@ char* word[NRW + 1] =
 	"", /* place holder */
 	"begin", "call", "const", "do", "end","if",
 	"odd", "procedure", "then", "var", "while",
-	"else", "exit", "for","return" //2017.10.22 , 2017.10.25
+	"else", "exit", "for","ret" //2017.10.22 , 2017.10.25
 };
 
 int wsym[NRW + 1] =
@@ -182,8 +182,8 @@ typedef struct
 	char name[MAXIDLEN + 1];
 	int  kind;
 	int  value;
-	short prodn;
-	//int FLAG;//空间要跟mask的一样
+	//int pron;
+	int FLAG;//空间要跟mask的一样
 } comtab;
 
 comtab table[TXMAX];//常量，有常量变量过程
@@ -196,16 +196,16 @@ typedef struct
 	short level;
 	short address;
 	short prodn;
-	//short FLAG;//返回值的有无
+	short FLAG;//返回值的有无
 } mask;//变量(空间与comtab一样）
 
 FILE* infile;
 
-typedef struct cxnode {
+typedef struct cxnode {    //for saving series of cx in or_expr and and_expr
 	int cx;
 	struct cxnode *next;
 }*cxlist;
 
-int factflag = 0;
+int factflag = 0;  //used in top_expr
 
 // EOF PL0.h
