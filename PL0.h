@@ -1,9 +1,9 @@
 #include <stdio.h>
 
-#define NRW        11     // number of reserved words
+#define NRW        15     // number of reserved words
 #define TXMAX      500    // length of identifier table
 #define MAXNUMLEN  14     // maximum number of digits in numbers
-#define NSYM       12     // maximum number of symbols in array ssym and csym
+#define NSYM       13     // maximum number of symbols in array ssym and csym
 #define MAXIDLEN   10     // length of identifiers
 
 #define MAXADDRESS 32767  // maximum address
@@ -52,7 +52,12 @@ enum symtype
 	SYM_BITOR,              //2017.10.11
 	SYM_BITAND,
 	SYM_BITXOR,
-	SYM_MOD
+	SYM_MOD,
+	SYM_ELSE,
+	SYM_BITNOT,
+	SYM_EXIT,
+	SYM_FOR,
+	SYM_RET
 };
 
 enum idtype
@@ -62,7 +67,7 @@ enum idtype
 
 enum opcode
 {
-	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC
+	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC, EXT, POP
 };
 
 enum oprcode
@@ -71,7 +76,8 @@ enum oprcode
 	OPR_MUL, OPR_DIV, OPR_ODD, OPR_EQU,
 	OPR_NEQ, OPR_LES, OPR_LEQ, OPR_GTR,
 	OPR_AND, OPR_OR, OPR_NOT, OPR_GEQ,
-	OPR_MOD, OPR_BitOR, OPR_BitAND, OPR_BitXOR              //2017.10.11
+	OPR_MOD, OPR_BitOR, OPR_BitAND, OPR_BitXOR,              //2017.10.11
+    OPR_BitNOT
 };
 
 
@@ -111,12 +117,12 @@ char* err_msg[] =
 /* 23 */    "The symbol can not be followed by a factor.",
 /* 24 */    "The symbol can not be as the beginning of an expression.",
 /* 25 */    "The number is too great.",
-/* 26 */    "",
-/* 27 */    "",
-/* 28 */    "",
+/* 26 */    "Redundant ';'.",
+/* 27 */    "Unmatched 'else'.",
+/* 28 */    "Incomplete 'for' statement.",
 /* 29 */    "",
 /* 30 */    "",
-/* 31 */    "",
+/* 31 */    "Incomplete program.",
 /* 32 */    "There are too many levels."
 };
 
@@ -132,6 +138,7 @@ int  err;
 int  cx;         // index of current instruction to be generated.
 int  level = 0;
 int  tx = 0;
+int  Flag = 0;
 
 char line[80];
 
@@ -141,31 +148,33 @@ char* word[NRW + 1] =
 {
 	"", /* place holder */
 	"begin", "call", "const", "do", "end","if",
-	"odd", "procedure", "then", "var", "while"
+	"odd", "procedure", "then", "var", "while",
+	"else", "exit", "for", "ret"
 };
 
 int wsym[NRW + 1] =
 {
 	SYM_NULL, SYM_BEGIN, SYM_CALL, SYM_CONST, SYM_DO, SYM_END,
-	SYM_IF, SYM_ODD, SYM_PROCEDURE, SYM_THEN, SYM_VAR, SYM_WHILE
+	SYM_IF, SYM_ODD, SYM_PROCEDURE, SYM_THEN, SYM_VAR, SYM_WHILE,
+    SYM_ELSE, SYM_EXIT, SYM_FOR, SYM_RET
 };
 
 int ssym[NSYM + 1] =
 {
 	SYM_NULL, SYM_PLUS, SYM_MINUS, SYM_TIMES, SYM_SLASH,
 	SYM_LPAREN, SYM_RPAREN, SYM_EQU, SYM_COMMA, SYM_PERIOD, SYM_SEMICOLON,
-	SYM_BITXOR,SYM_MOD
+	SYM_BITXOR, SYM_MOD, SYM_BITNOT
 };
 
 char csym[NSYM + 1] =
 {
-	' ', '+', '-', '*', '/', '(', ')', '=', ',', '.', ';','^','%'
+	' ', '+', '-', '*', '/', '(', ')', '=', ',', '.', ';','^','%','~'
 };
 
-#define MAXINS   8
+#define MAXINS   10
 char* mnemonic[MAXINS] =
 {
-	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC"
+	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP"
 };
 
 typedef struct
