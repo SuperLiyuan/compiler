@@ -359,7 +359,9 @@ void factor(symset fsys)
 					gen(LOD, level - mk->level, mk->address);
 					break;
 				case ID_PROCEDURE:
-					error(21); // Procedure identifier can not be in an expression.
+					mask* mk;
+					mk = (mask*)table[i];
+					gen(CAL, level - mk->level, mk->address);
 					break;
 				} // switch
 			}
@@ -796,6 +798,18 @@ void statement(symset fsys)
 		gen(JMP, 0, cx1);
 		code[cx2].a = cx;
 	}
+	else if (sym == SYM_RET) {
+		getsym();
+		if (sym == SYM_SEMICOLON) {//return; 则把0放在被调用的栈顶，然后再放到原栈栈顶
+			gen(LIT, 0, 0);
+			gen(OPR, 0, OPR_RET);
+		}
+		else if (sym == )
+		else {//return 1;return 1+x;return fact(n-1);
+			expression();//调用后的结果存在栈顶
+			gen(OPR, 0, OPR_RET);
+		}
+	}
 	test(fsys, phi, 19);
 } // statement
 
@@ -1011,7 +1025,8 @@ void interpret()
 			switch (i.a) // operator
 			{
 			case OPR_RET:
-				top = b - 1;
+				stack[b] = stack[top];
+				top = b;
 				pc = stack[top + 3];
 				b = stack[top + 2];
 				break;
