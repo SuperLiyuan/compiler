@@ -182,6 +182,7 @@ typedef struct
 	char name[MAXIDLEN + 1];
 	int  kind;
 	int  value;
+	int  FLAG;
 } comtab;
 
 comtab table[TXMAX];
@@ -192,7 +193,16 @@ typedef struct
 	int   kind;
 	short level;
 	short address;
+	short prodn;
+	short FLAG;
 } mask;
+
+typedef struct cxnode{
+	int cx;
+	struct cxnode *next;
+}*cxlist;
+
+int factflag = 0;
 
 FILE* infile;
 
