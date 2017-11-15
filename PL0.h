@@ -13,6 +13,7 @@
 #define MAXSYM     30     // maximum number of symbols
 
 #define STACKSIZE  1000   // maximum storage
+#define MAXDIM     10     // maximum array dimensions
 
 enum symtype
 {
@@ -57,7 +58,9 @@ enum symtype
 	SYM_BITNOT,
 	SYM_EXIT,
 	SYM_FOR,
-	SYM_RET
+	SYM_RET,
+	SYM_LBRACK,    //'['
+	SYM_RBRACK     //']'
 };
 
 enum idtype
@@ -94,7 +97,7 @@ char* err_msg[] =
 /*  0 */    "",
 /*  1 */    "Found ':=' when expecting '='.",
 /*  2 */    "There must be a number to follow '='.",
-/*  3 */    "There must be an '=' to follow the identifier.",
+/*  3 */    "There must be an '=' or dimension declaration to follow the identifier.",
 /*  4 */    "There must be an identifier to follow 'const', 'var', or 'procedure'.",
 /*  5 */    "Missing ',' or ';'.",
 /*  6 */    "Incorrect procedure name.",
@@ -107,13 +110,13 @@ char* err_msg[] =
 /* 13 */    "':=' expected.",
 /* 14 */    "There must be an identifier to follow the 'call'.",
 /* 15 */    "A constant or variable can not be called.",
-/* 16 */    "'(' expected.",             //2017.10.14
+/* 16 */    "'(' or expected.",             //2017.10.14
 /* 17 */    "';' or 'end' expected.",
 /* 18 */    "'do' expected.",
 /* 19 */    "Incorrect symbol.",
 /* 20 */    "Relative operators expected.",
 /* 21 */    "Procedure identifier can not be in an expression.",
-/* 22 */    "Missing ')'.",
+/* 22 */    "Missing ')' or ']'.",
 /* 23 */    "The symbol can not be followed by a factor.",
 /* 24 */    "The symbol can not be as the beginning of an expression.",
 /* 25 */    "The number is too great.",
@@ -163,12 +166,12 @@ int ssym[NSYM + 1] =
 {
 	SYM_NULL, SYM_PLUS, SYM_MINUS, SYM_TIMES, SYM_SLASH,
 	SYM_LPAREN, SYM_RPAREN, SYM_EQU, SYM_COMMA, SYM_PERIOD, SYM_SEMICOLON,
-	SYM_BITXOR, SYM_MOD, SYM_BITNOT
+	SYM_BITXOR, SYM_MOD, SYM_BITNOT, SYM_LBRACK, SYM_RBRACK
 };
 
 char csym[NSYM + 1] =
 {
-	' ', '+', '-', '*', '/', '(', ')', '=', ',', '.', ';','^','%','~'
+	' ', '+', '-', '*', '/', '(', ')', '=', ',', '.', ';','^','%','~','[',']'
 };
 
 #define MAXINS   10
@@ -177,12 +180,21 @@ char* mnemonic[MAXINS] =
 	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP"
 };
 
+typedef struct dimen  //dimensions of array
+{
+	unsigned int d;
+	struct dimen *next;
+}*dimen;
+
+dimen td;  //temporary dimension
+
 typedef struct
 {
 	char name[MAXIDLEN + 1];
 	int  kind;
 	int  value;
 	int  FLAG;
+	dimen dim;   //dim of const array
 } comtab;
 
 comtab table[TXMAX];
@@ -195,6 +207,7 @@ typedef struct
 	short address;
 	short prodn;
 	short FLAG;
+	dimen dim;    //dim of var array
 } mask;
 
 typedef struct cxnode{

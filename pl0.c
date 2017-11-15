@@ -242,6 +242,7 @@ void enter(int kind)
 
 	tx++;
 	strcpy(table[tx].name, id);
+	*id = '\0';   //reset to empty char array
 	table[tx].kind = kind;
 	switch (kind)
 	{
@@ -252,11 +253,15 @@ void enter(int kind)
 			num = 0;
 		}
 		table[tx].value = num;
+		table[tx].dim = td;
+		td = NULL;
 		break;
 	case ID_VARIABLE:
 		mk = (mask*)&table[tx];
 		mk->level = level;
 		mk->address = dx++;
+		mk->dim = td;
+		td = NULL;
 		break;
 	case ID_PROCEDURE:
 		mk = (mask*)&table[tx];
@@ -281,7 +286,21 @@ void constdeclaration()
 {
 	if (sym == SYM_IDENTIFIER)
 	{
+		int dc = 0;   //dimension counter
+		
 		getsym();
+		while (sym == SYM_LBRACT)
+		{
+			
+			if (sym == SYM_RBRACT)
+			{
+				getsym();
+			}
+			else 
+			{
+				error(22);  //missing ')' or ']'
+			}
+		}
 		if (sym == SYM_EQU || sym == SYM_BECOMES)
 		{
 			if (sym == SYM_BECOMES)
@@ -302,8 +321,8 @@ void constdeclaration()
 			error(3); // There must be an '=' to follow the identifier.
 		}
 	}
-	else	error(4);
-	// There must be an identifier to follow 'const', 'var', or 'procedure'.
+	else	error(4);// There must be an identifier to follow 'const', 'var', or 'procedure'.
+	
 } // constdeclaration
 
 //////////////////////////////////////////////////////////////////////
@@ -311,6 +330,20 @@ void vardeclaration(void)
 {
 	if (sym == SYM_IDENTIFIER)
 	{
+		getsym();
+		while (sym == SYM_LBRACT)
+		{
+			
+			if (sym == SYM_RBRACT)
+			{
+				getsym();
+			}
+			else 
+			{
+				error(22);  //missing ')' or ']'
+			}
+		}
+		
 		enter(ID_VARIABLE);
 		getsym();
 	}
@@ -1095,44 +1128,44 @@ void block(symset fsys)
 			}*/
 
 //在这里添加参数的识别
-	while( sym == SYM_PROCEDURE )
-	{
-		dx = 3;
-		prodn = 0;
-
-		getsym();
-
-		if( sym == IDENTIFIER )
+		while( sym == SYM_PROCEDURE )
 		{
-			enter(ID_PROCEDURE);
-		}
-		else
-		{
-			error(4);
-		}
-		getsym();
-		if( sym == LPAREN )
+			dx = 3;
+			prodn = 0;
+
 			getsym();
 
-		else error();
-
-		if(sym == SYM_INDENTIFIER ){
-
-			do{
-				enter( SYM_VARIABLE);   //记录参数名
-				++prodn;
+			if( sym == IDENTIFIER )
+			{
+				enter(ID_PROCEDURE);
+			}
+			else
+			{
+				error(4);
+			}
+			getsym();
+			if( sym == LPAREN )
 				getsym();
-				if( sym == SYM_COMMA)
 
+			else error();
+
+			if(sym == SYM_INDENTIFIER ){
+
+				do{
+					enter( SYM_VARIABLE);   //记录参数名
+					++prodn;
+					getsym();
+					if( sym == SYM_COMMA)
+
+					getsym();
+				}while(sym == SYM_INDENTIFIER);//处理完所有参数
+			}
+
+			if( sym == RPAREN )
 				getsym();
-			}while(sym == SYM_INDENTIFIER);//处理完所有参数
-		}
+			else error();//缺少右括号
 
-		if( sym == RPAREN )
-        	getsym();
-		else error();//缺少右括号
-
-	}
+	
 
 /*			if (sym == SYM_SEMICOLON)
 			{
@@ -1383,6 +1416,8 @@ int main()
 	err = cc = cx = ll = factflag = 0; // initialize global variables
 	ch = ' ';
 	kk = MAXIDLEN;
+	*id = '\0';
+	td = NULL;
 
 	getsym();
 
