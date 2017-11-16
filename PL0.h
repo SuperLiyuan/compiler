@@ -59,8 +59,10 @@ enum symtype
 	SYM_EXIT,
 	SYM_FOR,
 	SYM_RET,
-	SYM_LBRACK,    //'['
-	SYM_RBRACK     //']'
+	SYM_LBRKET,    //'['
+	SYM_RBRKET,    //']'
+	SYM_LBRACE,    //'{'
+	SYM_RBRACE    //'}'
 };
 
 enum idtype
@@ -123,10 +125,12 @@ char* err_msg[] =
 /* 26 */    "Redundant ';'.",
 /* 27 */    "Unmatched 'else'.",
 /* 28 */    "Incomplete 'for' statement.",
-/* 29 */    "",
-/* 30 */    "",
+/* 29 */    "There must be an number or const in dimension declaration.",
+/* 30 */    "Missing '}'.",
 /* 31 */    "Incomplete program.",
-/* 32 */    "There are too many levels."
+/* 32 */    "There are too many levels.",
+/* 33 */    "Too many initializers.",
+/* 34 */    ""
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -166,7 +170,7 @@ int ssym[NSYM + 1] =
 {
 	SYM_NULL, SYM_PLUS, SYM_MINUS, SYM_TIMES, SYM_SLASH,
 	SYM_LPAREN, SYM_RPAREN, SYM_EQU, SYM_COMMA, SYM_PERIOD, SYM_SEMICOLON,
-	SYM_BITXOR, SYM_MOD, SYM_BITNOT, SYM_LBRACK, SYM_RBRACK
+	SYM_BITXOR, SYM_MOD, SYM_BITNOT, SYM_LBRKET, SYM_RBRKET
 };
 
 char csym[NSYM + 1] =
@@ -180,10 +184,10 @@ char* mnemonic[MAXINS] =
 	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP"
 };
 
-typedef struct dimen  //dimensions of array
+typedef struct dim  //dimensions of array
 {
 	unsigned int d;
-	struct dimen *next;
+	struct dim *next;
 }*dimen;
 
 dimen td;  //temporary dimension

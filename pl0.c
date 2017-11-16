@@ -233,6 +233,75 @@ void test(symset s1, symset s2, int n)
 } // test
 
 //////////////////////////////////////////////////////////////////////
+int arraylength()
+{//calculate and return length of an array
+    int i = 0, l = 1;   //length
+	dimen p;
+
+	p = td = (dimen)malloc(sizeof(struct dim));
+	p->d = 1;  //initialization
+	p->next = NULL;
+
+	while(sym == SYM_LBRKET){  //'['
+		getsym();
+		if(sym == SYM_NUMBER || sym == SYM_IDENTIFIER){
+			if(sym == SYM_IDENTIFIER)
+			{
+				if ((i = position(id)) == 0)
+			    {
+				    error(11); // Undeclared identifier.
+			    }
+		    	else if(table[i].kind == ID_CONSTANT)
+				{
+					num = table[i].value;
+				}
+				else
+				{
+					error(29); //There must be an number or const in dimension declaration
+					getsym();
+					if(sym == SYM_RBRKET) //']'
+					{
+						getsym();
+					}
+					else
+					{
+						error(22); //Missing ')' or ']'
+					}
+					continue;
+				}
+			}
+
+			l *= num;
+			p = p->next = (dimen)malloc(sizeof(struct dim));
+			p->d = num;
+			p->next = NULL;
+
+			getsym();
+			if(sym == SYM_RBRKET) //']'
+			{
+				getsym();
+			}
+			else
+			{
+				error(22); //Missing ')' or ']'
+			}
+		}
+		else
+		{
+			error(29); //There must be an number or const in dimension declaration
+
+			symset set,set1;
+			set = createset(SYM_IDENTIFIER, SYM_RBRKET, SYM_BEGIN, SYM_NULL);
+			set1 = createset(SYM_NULL);
+			test(set1, set, 0);
+			destroyset(set1);
+			destroyset(set);
+		}
+	}
+	return l;
+}
+
+//////////////////////////////////////////////////////////////////////
 int dx;  // data allocation index
 
 // enter object(constant, variable or procedre) into table.
@@ -253,13 +322,14 @@ void enter(int kind)
 			num = 0;
 		}
 		table[tx].value = num;
+		num = 0;
 		table[tx].dim = td;
 		td = NULL;
 		break;
 	case ID_VARIABLE:
 		mk = (mask*)&table[tx];
 		mk->level = level;
-		mk->address = dx++;
+		mk->address = dx;
 		mk->dim = td;
 		td = NULL;
 		break;
@@ -284,29 +354,53 @@ int position(char* id)
 //////////////////////////////////////////////////////////////////////
 void constdeclaration()
 {
+	int l = 1;
 	if (sym == SYM_IDENTIFIER)
 	{
-		int dc = 0;   //dimension counter
-		
 		getsym();
-		while (sym == SYM_LBRACT)
+		if (sym == SYM_LBRKET) //'['
 		{
-			
-			if (sym == SYM_RBRACT)
-			{
-				getsym();
-			}
-			else 
-			{
-				error(22);  //missing ')' or ']'
-			}
+			l = arraylength();
 		}
 		if (sym == SYM_EQU || sym == SYM_BECOMES)
 		{
 			if (sym == SYM_BECOMES)
 				error(1); // Found ':=' when expecting '='.
 			getsym();
-			if (sym == SYM_NUMBER)
+			if (sym == SYM_LBRACE) //'{'
+			{
+				getsym();
+				do{
+					if (sym == SYM_NUMBER)
+					{
+						if(!(l--))
+						{
+							error(33);  //too many initializers
+							getsym();
+							break;
+						}
+						enter(ID_CONSTANT);
+						getsym();
+					}
+					else
+					{
+						error(2); // There must be a number to follow '='.
+					}
+				}while(sym == SYM_COMMA);
+				while(l--) //fill the rest of array by 0
+				{
+					enter(ID_CONSTANT);
+				}
+				if(sym == SYM_RBRACE) //'}'
+				{
+					getsym();
+				}
+				else
+				{
+					error(30);  //missing '}'
+				}
+			}
+			else if(sym == SYM_NUMBER)
 			{
 				enter(ID_CONSTANT);
 				getsym();
@@ -322,35 +416,30 @@ void constdeclaration()
 		}
 	}
 	else	error(4);// There must be an identifier to follow 'const', 'var', or 'procedure'.
-	
+
 } // constdeclaration
 
 //////////////////////////////////////////////////////////////////////
-void vardeclaration(void)
+int vardeclaration(void)
 {
+	int l = 1; //length
 	if (sym == SYM_IDENTIFIER)
 	{
 		getsym();
-		while (sym == SYM_LBRACT)
+		if (sym == SYM_LBRKET)
 		{
-			
-			if (sym == SYM_RBRACT)
-			{
-				getsym();
-			}
-			else 
-			{
-				error(22);  //missing ')' or ']'
-			}
+			l = arraylength();
 		}
-		
+
 		enter(ID_VARIABLE);
+		dx += l;
 		getsym();
 	}
 	else
 	{
 		error(4); // There must be an identifier to follow 'const', 'var', or 'procedure'.
 	}
+	return l;
 } // vardeclaration
 
 //////////////////////////////////////////////////////////////////////
@@ -1149,7 +1238,7 @@ void block(symset fsys)
 
 			else error();
 
-			if(sym == SYM_INDENTIFIER ){
+			if(sym == SYM_IDENTIFIER ){
 
 				do{
 					enter( SYM_VARIABLE);   //记录参数名
@@ -1158,14 +1247,14 @@ void block(symset fsys)
 					if( sym == SYM_COMMA)
 
 					getsym();
-				}while(sym == SYM_INDENTIFIER);//处理完所有参数
+				}while(sym == SYM_IDENTIFIER);//处理完所有参数
 			}
 
 			if( sym == RPAREN )
 				getsym();
 			else error();//缺少右括号
 
-	
+
 
 /*			if (sym == SYM_SEMICOLON)
 			{
@@ -1413,7 +1502,7 @@ int main()
 	statbegsys = uniteset(facbegsys, set);
 	destroyset(set);
 
-	err = cc = cx = ll = factflag = 0; // initialize global variables
+	err = cc = cx = ll = factflag = num = 0; // initialize global variables
 	ch = ' ';
 	kk = MAXIDLEN;
 	*id = '\0';
