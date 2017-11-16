@@ -1040,10 +1040,12 @@ void statement(symset fsys)
 			gen(LIT, 0, 0);
 			gen(OPR, 0, OPR_RET);
 		}
-		else if (sym == )
+
 		else {//return 1;return 1+x;return fact(n-1);
-			expression();//调用后的结果存在栈顶
+			top_expression();//调用后的结果存在栈顶
 			gen(OPR, 0, OPR_RET);
+			if (sym != SYM_SEMICOLON)
+				error(10);// missing ';'.
 		}
 	}
 	test(fsys, phi, 19);
