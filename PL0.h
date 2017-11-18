@@ -13,7 +13,7 @@
 #define MAXSYM     30     // maximum number of symbols
 
 #define STACKSIZE  1000   // maximum storage
-#define MAXDIM     10     // maximum array dimensions
+#define MAXDIM     100    // maximum array dimensions
 
 enum symtype
 {
@@ -98,7 +98,7 @@ char* err_msg[] =
 {
 /*  0 */    "",
 /*  1 */    "Found ':=' when expecting '='.",
-/*  2 */    "There must be a number to follow '='.",
+/*  2 */    "There must be a number or const to follow '='.",
 /*  3 */    "There must be an '=' or dimension declaration to follow the identifier.",
 /*  4 */    "There must be an identifier to follow 'const', 'var', or 'procedure'.",
 /*  5 */    "Missing ',' or ';'.",
@@ -125,12 +125,15 @@ char* err_msg[] =
 /* 26 */    "Redundant ';'.",
 /* 27 */    "Unmatched 'else'.",
 /* 28 */    "Incomplete 'for' statement.",
-/* 29 */    "There must be an number or const in dimension declaration.",
+/* 29 */    "There must be an number or const in declaration.",
 /* 30 */    "Missing '}'.",
 /* 31 */    "Incomplete program.",
 /* 32 */    "There are too many levels.",
 /* 33 */    "Too many initializers.",
-/* 34 */    "The number of actual parameters and virtual parameters aren't matched or Missing ')'"
+/* 34 */    "The number of actual parameters and virtual parameters aren't matched or Missing ')'",
+/* 35 */    "There must be an number or const in dimensions of const array in using.",
+/* 36 */    "Out of array boundary.",
+/* 37 */    "Too many dimensions."
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -146,6 +149,7 @@ int  cx;         // index of current instruction to be generated.
 int  level = 0;
 int  tx = 0;
 int  Flag = 0;
+int  *value = NULL;    //array of value of const
 
 char line[80];
 
@@ -184,21 +188,15 @@ char* mnemonic[MAXINS] =
 	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP","DIP"
 };
 
-typedef struct dim  //dimensions of array
-{
-	unsigned int d;
-	struct dim *next;
-}*dimen;
-
-dimen td;  //temporary dimension
+int td[MAXDIM];   //temporary dimensions
 
 typedef struct
 {
 	char name[MAXIDLEN + 1];
 	int  kind;
-	int  value;
-	int  FLAG;
-	dimen dim;   //dim of const array
+	int  *value;
+	short empty;   //no use
+	int  *dim;   //dim of const array
 } comtab;
 
 comtab table[TXMAX];
@@ -210,8 +208,7 @@ typedef struct
 	short level;
 	short address;
 	short prodn;
-	short FLAG;
-	dimen dim;    //dim of var array
+	int   *dim;    //dim of var array
 } mask;
 
 typedef struct cxnode{

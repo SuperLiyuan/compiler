@@ -235,12 +235,7 @@ void test(symset s1, symset s2, int n)
 //////////////////////////////////////////////////////////////////////
 int arraylength()
 {//calculate and return length of an array
-    int i = 0, l = 1;   //length
-	dimen p;
-
-	p = td = (dimen)malloc(sizeof(struct dim));
-	p->d = 1;  //initialization
-	p->next = NULL;
+    int i = 0, l = 1, k = 0;   //length
 
 	while(sym == SYM_LBRKET){  //'['
 		getsym();
@@ -253,7 +248,7 @@ int arraylength()
 			    }
 		    	else if(table[i].kind == ID_CONSTANT)
 				{
-					num = table[i].value;
+					num = constvalue(i);
 				}
 				else
 				{
@@ -272,9 +267,12 @@ int arraylength()
 			}
 
 			l *= num;
-			p = p->next = (dimen)malloc(sizeof(struct dim));
-			p->d = num;
-			p->next = NULL;
+			td[k++] = num;    
+			if(k>=MAXDIM)
+			{
+				error(36);    //Too many dimensions
+				break;
+			}
 
 			getsym();
 			if(sym == SYM_RBRKET) //']'
@@ -288,17 +286,98 @@ int arraylength()
 		}
 		else
 		{
-			error(29); //There must be an number or const in dimension declaration
+			error(29); //There must be an number or const in declaration
 
 			symset set,set1;
-			set = createset(SYM_IDENTIFIER, SYM_RBRKET, SYM_BEGIN, SYM_NULL);
-			set1 = createset(SYM_NULL);
+			set1 = createset(SYM_LBRKET, SYM_NULL);
+			set = createset(SYM_IDENTIFIER, SYM_BEGIN, SYM_EQU, SYM_NULL);
 			test(set1, set, 0);
 			destroyset(set1);
 			destroyset(set);
 		}
 	}
 	return l;
+}
+
+//////////////////////////////////////////////////////////////////////
+int offset(int a)
+{//calculate and return the offset when using array
+	int i = 0, k = 0, temp[MAXDIM]={0};
+	
+	while(sym == SYM_LBRKET)
+	{	
+		getsym();
+		if(sym == SYM_NUMBER || sym == SYM_IDENTIFIER){
+			if(sym == SYM_IDENTIFIER)
+			{
+				if ((i = position(id)) == 0)
+			    {
+				    error(11); // Undeclared identifier.
+			    }
+		    	else if(table[i].kind == ID_CONSTANT)
+				{
+					num = constvalue(i);
+				}
+				else
+				{
+					error(34); //There must be an number or const in dimension declaration
+					getsym();
+					if(sym == SYM_RBRKET) //']'
+					{
+						getsym();
+					}
+					else
+					{
+						error(22); //Missing ')' or ']'
+					}
+					continue;
+				}
+			}
+
+			if(num+1 && num < table[a].dim[k])
+			{
+				temp[k++] = num;
+			}
+			else
+			{
+				error(35); //Out of array boundary.
+			}
+
+			getsym();
+			if(sym == SYM_RBRKET) //']'
+			{
+				getsym();
+			}
+			else
+			{
+				error(22); //Missing ')' or ']'
+			}
+		}
+		else
+		{
+			
+			error(34); //There must be an number or const in dimensions of const array in using.
+
+			symset set;
+			set = createset(SYM_LBRKET, SYM_SEMICOLON, SYM_NULL);
+			test(set, facbegsys, 0);
+			destroyset(set);
+		}
+	}
+
+	int sum = 0, bndry = 1;
+	while(k--)
+	{
+		sum += temp[k]*bndry;
+		bndry *= table[a].dim[k];
+	}
+	return sum;
+}
+
+//////////////////////////////////////////////////////////////////////
+int constvalue(int a)
+{//find and return the value of const
+	return table[a].value[offset(a)];
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -316,22 +395,17 @@ void enter(int kind)
 	switch (kind)
 	{
 	case ID_CONSTANT:
-		if (num > MAXADDRESS)
-		{
-			error(25); // The number is too great.
-			num = 0;
-		}
-		table[tx].value = num;
-		num = 0;
+		table[tx].value = value;
+		value = NULL;
 		table[tx].dim = td;
-		td = NULL;
+		td = (int*)malloc(MAXDIM, sizeof(int));
 		break;
 	case ID_VARIABLE:
 		mk = (mask*)&table[tx];
 		mk->level = level;
 		mk->address = dx;
 		mk->dim = td;
-		td = NULL;
+		td = (int*)malloc(MAXDIM, sizeof(int));
 		break;
 	case ID_PROCEDURE:
 		mk = (mask*)&table[tx];
@@ -354,7 +428,7 @@ int position(char* id)
 //////////////////////////////////////////////////////////////////////
 void constdeclaration()
 {
-	int l = 1;
+	int l = 1, k = 0;
 	if (sym == SYM_IDENTIFIER)
 	{
 		getsym();
@@ -370,26 +444,51 @@ void constdeclaration()
 			if (sym == SYM_LBRACE) //'{'
 			{
 				getsym();
+				value = (int*)malloc(l,sizeof(int));
+				int i = 0;
 				do{
-					if (sym == SYM_NUMBER)
+					if (sym == SYM_NUMBER || sym == SYM_IDENTIFIER)
 					{
 						if(!(l--))
 						{
 							error(33);  //too many initializers
 							getsym();
+							symset set1,set;
+							set1 = createset(SYM_RBRACE, SYM_COMMA, SYM_NULL);
+							set = createset(SYM_VAR, SYM_PROCEDURE, SYM_IDENTIFIER, SYM_BEGIN, SYM_NULL);
+							test(set1, set, 0);
+							destroyset(set);
+							destroyset(set1);
 							break;
 						}
-						enter(ID_CONSTANT);
+						if(sym == SYM_IDENTIFIER)
+						{
+							if ((i = position(id)) == 0)
+							{
+								error(11); // Undeclared identifier.
+							}
+							else if(table[i].kind == ID_CONSTANT)
+							{
+								num = constvalue(i);
+							}
+							else
+							{
+								error(29); //There must be an number or const in declaration
+								getsym();
+								continue;
+							}
+						}
+						value[k++] = num;
 						getsym();
 					}
 					else
 					{
-						error(2); // There must be a number to follow '='.
+						error(2); // There must be a number or const to follow '='.
 					}
 				}while(sym == SYM_COMMA);
 				while(l--) //fill the rest of array by 0
 				{
-					enter(ID_CONSTANT);
+					value[k++] = 0;
 				}
 				if(sym == SYM_RBRACE) //'}'
 				{
@@ -402,13 +501,15 @@ void constdeclaration()
 			}
 			else if(sym == SYM_NUMBER)
 			{
-				enter(ID_CONSTANT);
+				value = (int*)malloc(sizeof(int));
+				*value = num;
 				getsym();
 			}
 			else
 			{
 				error(2); // There must be a number to follow '='.
 			}
+			enter(ID_CONSTANT);
 		}
 		else
 		{
@@ -505,30 +606,26 @@ void factor(symset fsys)
 			    }
 		    	else
 			    {
+					getsym();
 				    switch (table[i].kind)
 				    {
 					    mask* mk;
 				    case ID_CONSTANT:
-					    gen(LIT, 0, table[i].value);
+					    gen(LIT, 0, constvalue(i));
 					    break;
 				    case ID_VARIABLE:
 					    mk = (mask*)&table[i];
-					    proceCall(mk);
+					    gen(LOD, level - mk->level, (mk->address)+offset(i));
 					    break;
 				    case ID_PROCEDURE:
 						mk = (mask*)&table[i];
+					    proceCall(mk);
 						break;
 					} // switch
 				}
-				getsym();
 			}
 			else if (sym == SYM_NUMBER)
 			{
-				if (num > MAXADDRESS)
-				{
-					error(25); // The number is too great.
-					num = 0;
-				}
 				gen(LIT, 0, num);
 				getsym();
 			}
@@ -842,14 +939,14 @@ void top_expr(symset fsys)              //2017.10.26
 		else if (table[i].kind == ID_VARIABLE)
 		{
 			mk = (mask*)&table[i];
-			gen(LOD, level - mk->level, mk->address);
+			gen(LOD, level - mk->level, (mk->address)+offset(i));
 			getsym();
 			if (sym == SYM_BECOMES)
 			{// assignment expression
 				getsym();
 				cx--;    //delete LOD instruction
 				top_expr(fsys);
-				gen(STO, level - mk->level, mk->address);
+				gen(STO, level - mk->level, (mk->address)+offset(i));
 			}
 			else
 			{
@@ -858,11 +955,7 @@ void top_expr(symset fsys)              //2017.10.26
 				or_expr(fsys);
 			}
 		}
-		else if (table[i].kind == ID_CONSTANT)
-		{
-			or_expr(fsys);
-		}
-		else // ID_PROCEDURE
+		else // ID_PROCEDURE or ID_VARIABLE
 		{
 			; // procedure call
 		}
@@ -1396,7 +1489,7 @@ void interpret()
 		case JMP:
 			pc += i.a-1;
 			break;
-		case DIP://This instruction is added to transfer prodn with CAL  11.18
+		case DIP: //This instruction is added to transfer prodn with CAL  11.18
 			stack[top+1] = base(stack ,b, i.l);
 			stack[top+2] = b;
 			stack[top+3] = pc+1;
