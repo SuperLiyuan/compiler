@@ -846,12 +846,14 @@ void top_expr(symset fsys)              //2017.10.26
 	}
 }
 
+int count;//无return的返回值需要用，判断begin-end配对是否已经结束
 //////////////////////////////////////////////////////////////////////
 void statement(symset fsys)
 {
 	int i, cx1, cx2, cx3;
 	int temp,tmpnum;
 	symset set1, set;
+	count = 0;
 
 	if (inset(sym, facbegsys))        //2017.10.26
 	{ // variable assignment
@@ -980,6 +982,7 @@ void statement(symset fsys)
 	}
 	else if (sym == SYM_BEGIN)
 	{ //chunk
+		count++;
 		getsym();
 		set1 = createset(SYM_SEMICOLON, SYM_END, SYM_NULL);
 		set = uniteset(set1, fsys);
@@ -997,7 +1000,11 @@ void statement(symset fsys)
 		destroyset(set);
 		if (sym == SYM_END)
 		{
+			count--;
 			getsym();
+			if (count == 0) {//括号全部配对之后将0放在栈顶
+				gen(OPR, 0, OPR_RET);
+			}
 		}
 		else
 		{
