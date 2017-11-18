@@ -130,7 +130,7 @@ char* err_msg[] =
 /* 31 */    "Incomplete program.",
 /* 32 */    "There are too many levels.",
 /* 33 */    "Too many initializers.",
-/* 34 */    ""
+/* 34 */    "The number of actual parameters and virtual parameters aren't matched or Missing ')'"
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -181,7 +181,7 @@ char csym[NSYM + 1] =
 #define MAXINS   10
 char* mnemonic[MAXINS] =
 {
-	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP"
+	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP","DIP"
 };
 
 typedef struct dim  //dimensions of array

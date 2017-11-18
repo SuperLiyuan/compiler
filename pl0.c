@@ -456,6 +456,34 @@ void listcode(int from, int to)
 } // listcode
 
 //////////////////////////////////////////////////////////////////////
+void proceCall(mask* mk){ // procedure call
+		getsym();					
+		if( sym == lparen ){
+			getsym();
+		}
+		else error( );
+	    
+		for(j=0;j<mk->prodn;i++)
+		{
+				
+				if(sym == SYM_RPAREN)
+					break;
+				else {
+					set = uniteset(createset(SYM_RPAREN,SYM_COMMA,SYM_NULL),fsys);
+					top_expr(set);
+					 
+				} 
+				if(sym == SYM_COMMA)
+					getsym();
+		}				
+		if(j != mk->prodn)
+			error(34);
+		
+		test(createset(SYM_RPAREN,SYM_NULL),createset(SYM_RPAREN,SYM_SEMICOLON,SYM_END,SYM_NULL),34);//"The number of actual parameters and virtual parameters aren't matched or Missing ')'"
+		gen(DIP,level-mk->level,prodn);	 
+		gen(CAL, 0, mk->address);	
+}
+
 void factor(symset fsys)
 {
 	void top_expr(symset fsys);
@@ -485,11 +513,10 @@ void factor(symset fsys)
 					    break;
 				    case ID_VARIABLE:
 					    mk = (mask*)&table[i];
-					    gen(LOD, level - mk->level, mk->address);
+					    proceCall(mk);
 					    break;
 				    case ID_PROCEDURE:
 						mk = (mask*)&table[i];
-						gen(CAL, level - mk->level, mk->address);
 						break;
 					} // switch
 				}
@@ -866,70 +893,6 @@ void statement(symset fsys)
 			error(10);     // ';'expected
 		}
 	}
-	else if (sym == SYM_CALL)
-	{ // procedure call
-		getsym();
-		if (sym != SYM_IDENTIFIER)
-		{
-			error(14); // There must be an identifier to follow the 'call'.
-		}
-		else
-		{
-			if (!(i = position(id)))
-			{
-				error(11); // Undeclared identifier.
-			}
-			else if (table[i].kind == ID_PROCEDURE)
-			{
-				mask* mk;
-				mk = (mask*)&table[i];
-
-				getsym();
-				if( sym == SYM_LPAREN ){
-					getsym;
-				}
-				else error( );
-
-				for(j=1;j<=mk->prodn;i++)
-					{
-					if( sym == SYM_IDENTIFIER){
-						if (!(i = position(id)))
-						{
-							error(11); // Undeclared identifier.
-						}
-						else if (table[i].kind == ID_PROCEDURE)
-
-							error();//过程不能作为参数
-						else if(table[i].kind == ID_VARIABLE){
-							 mask* mk0 = (mask*)&table[i];
-							 gen(STO, level - mk0->level, mk0->address);
-						}
-						else if(table[i].kind == ID_CONSTANT){
-							gen(STO, 0, table[i].value );
-						}
-						getsym();
-						if(sym == rparen)
-							break;
-						else if(sym == SYM_COMMA)
-							getsym();
-					}
-					else if( sym == rparen)
-						break;
-					else error();//缺右括号
-				}
-				if(j != mk->prodn){
-					error();//传参数目错误
-				}
-
-				gen(CAL, level - mk->level, mk->address);
-			}
-			else
-			{
-				error(15); // A constant or variable can not be called.
-			}
-			getsym();
-		}
-	}
 	else if (sym == SYM_IF)
 	{ // if statement
 		getsym();
@@ -1127,12 +1090,12 @@ void statement(symset fsys)
 		getsym();
 		if (sym == SYM_SEMICOLON) {//return; 则把0放在被调用的栈顶，然后再放到原栈栈顶
 			gen(LIT, 0, 0);
-			gen(OPR, 0, OPR_RET);
+			gen(OPR, prodn, OPR_RET);
 		}
 
 		else {//return 1;return 1+x;return fact(n-1);
 			top_expression();//调用后的结果存在栈顶
-			gen(OPR, 0, OPR_RET);
+			gen(OPR, prodn, OPR_RET);
 			if (sym != SYM_SEMICOLON)
 				error(10);// missing ';'.
 		}
@@ -1140,6 +1103,7 @@ void statement(symset fsys)
 	test(fsys, phi, 19);
 } // statement
 
+int prodn;
 //////////////////////////////////////////////////////////////////////
 void block(symset fsys)
 {
@@ -1205,24 +1169,11 @@ void block(symset fsys)
 			} while (sym == SYM_IDENTIFIER);
 		} // if
 		block_dx = dx; //save dx before handling procedure call!
-		/*while (sym == SYM_PROCEDURE)
-		{ // procedure declarations
-			getsym();
-			if (sym == SYM_IDENTIFIER)
-			{
-				enter(ID_PROCEDURE);
-				getsym();
-			}
-			else
-			{
-				error(4); // There must be an identifier to follow 'const', 'var', or 'procedure'.
-			}*/
 
-//在这里添加参数的识别
 		while( sym == SYM_PROCEDURE )
 		{
-			dx = 3;
-			prodn = 0;
+			dx = 0;
+			int prodn = 0;
 
 			getsym();
 
@@ -1256,17 +1207,6 @@ void block(symset fsys)
 				getsym();
 			else error();//缺少右括号
 
-
-
-/*			if (sym == SYM_SEMICOLON)
-			{
-				getsym();
-			}
-			else
-			{
-				error(5); // Missing ',' or ';'.
-			}*/
-
 			level++;
 			savedTx = tx;
 			set1 = createset(SYM_SEMICOLON, SYM_NULL);
@@ -1291,7 +1231,7 @@ void block(symset fsys)
 				error(5); // Missing ',' or ';'.
 			}
 		} // while
-		dx = block_dx+mk->prodn; //restore dx after handling procedure declaration! dx是参数和局部变量的总个数
+		dx = block_dx; //restore dx after handling procedure declaration! dx是参数和局部变量的总个数
 		set1 = createset(SYM_IDENTIFIER, SYM_NULL);
 		set = uniteset(statbegsys, set1);
 		test(set, declbegsys, 7);
@@ -1302,13 +1242,14 @@ void block(symset fsys)
 	code[mk->address].a = cx-(mk->address);
 	mk->address = cx;
 	cx0 = cx;//why save
-	gen(INT, 0, dx-3);//原本是block，改成dx
+	gen(INT, 0, dx-mk->prodn);//原本是block，改成dx
 	set1 = createset(SYM_SEMICOLON, SYM_END, SYM_NULL);
 	set = uniteset(set1, fsys);
+	prodn = mk->prodn;
 	statement(set);
 	destroyset(set1);
 	destroyset(set);
-	gen(OPR, 0, OPR_RET); // 是怎么知道要return的 ，看了statament，statement在处理完一个最外层的begin……end后就会返回
+	gen(OPR, 0, OPR_RET); 
 	test(fsys, phi, 8); // test for error: Follow the statement is an incorrect symbol.
 	listcode(cx0, cx);
 } // block
@@ -1350,11 +1291,11 @@ void interpret()
 		case OPR:
 			switch (i.a) // operator
 			{
-			case OPR_RET:
+			case OPR_RET: //put the return value in stack[b],since the SL isn't useful anymore,no need to worry that it may be covered.
 				stack[b] = stack[top];
 				top = b;
-				pc = stack[top + 3];
-				b = stack[top + 2];
+				pc = stack[top + i.l + 2];
+				b = stack[top + i.l + 1];
 				break;
 			case OPR_NOT: //2017-09-24
 				stack[top] = !stack[top];
@@ -1446,15 +1387,6 @@ void interpret()
 			stack[base(stack, b, i.l) + i.a] = stack[top];
 			printf("%d\n", stack[top]);
 			break;
-		case CAL:
-			stack[top++] = base(stack, b, i.l);
-			// generate new block mark
-			stack[top++] = b;
-			stack[top++] = pc;
-
-			b = top -2;
-			pc = i.a;
-			break;
 		case INT:
 			top += i.a;
 			break;
@@ -1464,6 +1396,16 @@ void interpret()
 		case JMP:
 			pc += i.a-1;
 			break;
+		case DIP://This instruction is added to transfer prodn with CAL  11.18
+			stack[top+1] = base(stack ,b, i.l);
+			stack[top+2] = b;
+			stack[top+3] = pc+1;
+			b = top-i.a;
+			break;
+		case CAL:
+			pc = i.a;
+			break;
+		
 		case JPC:
 			if (stack[top] == 0)
 				pc += i.a-1;
