@@ -131,7 +131,7 @@ char* err_msg[] =
 /* 32 */    "There are too many levels.",
 /* 33 */    "Too many initializers.",
 /* 34 */    "The number of actual parameters and virtual parameters aren't matched or Missing ')'",
-/* 35 */    "There must be an number or const in dimensions of const array in using.",
+/* 35 */    "There must be an number or const in dimensions of an array in using.",
 /* 36 */    "Out of array boundary.",
 /* 37 */    "Too many dimensions."
 };
@@ -188,7 +188,7 @@ char* mnemonic[MAXINS] =
 	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP","DIP"
 };
 
-int td[MAXDIM];   //temporary dimensions
+int *td;   //temporary dimensions
 
 typedef struct
 {

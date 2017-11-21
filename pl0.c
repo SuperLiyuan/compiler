@@ -236,9 +236,19 @@ void test(symset s1, symset s2, int n)
 int arraylength()
 {//calculate and return length of an array
     int i = 0, l = 1, k = 0;   //length
+    symset set,set1;
 
 	while(sym == SYM_LBRKET){  //'['
 		getsym();
+        if(k>=MAXDIM)
+        {
+            error(37);    //Too many dimensions
+            set1 = createset(SYM_ADD, SYM_MINUS, SYM_MOD, SYM_AND, SYM_BECOMES, SYM_EQU, SYM_NULL);
+            test(set1, facbegsys, 0);
+            destroyset(set1);
+            break;
+        }
+
 		if(sym == SYM_NUMBER || sym == SYM_IDENTIFIER){
 			if(sym == SYM_IDENTIFIER)
 			{
@@ -267,12 +277,7 @@ int arraylength()
 			}
 
 			l *= num;
-			td[k++] = num;    
-			if(k>=MAXDIM)
-			{
-				error(36);    //Too many dimensions
-				break;
-			}
+			td[k++] = num;
 
 			getsym();
 			if(sym == SYM_RBRKET) //']'
@@ -288,7 +293,6 @@ int arraylength()
 		{
 			error(29); //There must be an number or const in declaration
 
-			symset set,set1;
 			set1 = createset(SYM_LBRKET, SYM_NULL);
 			set = createset(SYM_IDENTIFIER, SYM_BEGIN, SYM_EQU, SYM_NULL);
 			test(set1, set, 0);
@@ -303,10 +307,19 @@ int arraylength()
 int offset(int a)
 {//calculate and return the offset when using array
 	int i = 0, k = 0, temp[MAXDIM]={0};
-	
+
 	while(sym == SYM_LBRKET)
-	{	
+	{
 		getsym();
+		if(k>=MAXDIM)
+        {
+            error(37);    //Too many dimensions
+            set1 = createset(SYM_ADD, SYM_MINUS, SYM_MOD, SYM_AND, SYM_BECOMES, SYM_EQU, SYM_NULL);
+            test(set1, facbegsys, 0);
+            destroyset(set1);
+            break;
+        }
+
 		if(sym == SYM_NUMBER || sym == SYM_IDENTIFIER){
 			if(sym == SYM_IDENTIFIER)
 			{
@@ -320,7 +333,7 @@ int offset(int a)
 				}
 				else
 				{
-					error(34); //There must be an number or const in dimension declaration
+					error(35); //There must be an number or const in dimensions of an array in using
 					getsym();
 					if(sym == SYM_RBRKET) //']'
 					{
@@ -340,7 +353,7 @@ int offset(int a)
 			}
 			else
 			{
-				error(35); //Out of array boundary.
+				error(36); //Out of array boundary.
 			}
 
 			getsym();
@@ -355,8 +368,8 @@ int offset(int a)
 		}
 		else
 		{
-			
-			error(34); //There must be an number or const in dimensions of const array in using.
+
+			error(35); //There must be an number or const in dimensions of const array in using.
 
 			symset set;
 			set = createset(SYM_LBRKET, SYM_SEMICOLON, SYM_NULL);
@@ -398,14 +411,14 @@ void enter(int kind)
 		table[tx].value = value;
 		value = NULL;
 		table[tx].dim = td;
-		td = (int*)malloc(MAXDIM, sizeof(int));
+		td = (int*)malloc(MAXDIM*sizeof(int));
 		break;
 	case ID_VARIABLE:
 		mk = (mask*)&table[tx];
 		mk->level = level;
 		mk->address = dx;
 		mk->dim = td;
-		td = (int*)malloc(MAXDIM, sizeof(int));
+		td = (int*)malloc(MAXDIM*sizeof(int));
 		break;
 	case ID_PROCEDURE:
 		mk = (mask*)&table[tx];
@@ -558,33 +571,34 @@ void listcode(int from, int to)
 
 //////////////////////////////////////////////////////////////////////
 void proceCall(mask* mk){ // procedure call
-		getsym();					
+		getsym();
 		if( sym == lparen ){
 			getsym();
 		}
 		else error( );
-	    
+
 		for(j=0;j<mk->prodn;i++)
 		{
-				
+
 				if(sym == SYM_RPAREN)
 					break;
 				else {
 					set = uniteset(createset(SYM_RPAREN,SYM_COMMA,SYM_NULL),fsys);
 					top_expr(set);
-					 
-				} 
+
+				}
 				if(sym == SYM_COMMA)
 					getsym();
-		}				
+		}
 		if(j != mk->prodn)
 			error(34);
-		
+
 		test(createset(SYM_RPAREN,SYM_NULL),createset(SYM_RPAREN,SYM_SEMICOLON,SYM_END,SYM_NULL),34);//"The number of actual parameters and virtual parameters aren't matched or Missing ')'"
-		gen(DIP,level-mk->level,prodn);	 
-		gen(CAL, 0, mk->address);	
+		gen(DIP,level-mk->level,prodn);
+		gen(CAL, 0, mk->address);
 }
 
+//////////////////////////////////////////////////////////////////////
 void factor(symset fsys)
 {
 	void top_expr(symset fsys);
@@ -957,7 +971,7 @@ void top_expr(symset fsys)              //2017.10.26
 		}
 		else // ID_PROCEDURE or ID_VARIABLE
 		{
-			; // procedure call
+			or_expr(fsys);
 		}
 	}
 	else
@@ -1342,7 +1356,7 @@ void block(symset fsys)
 	statement(set);
 	destroyset(set1);
 	destroyset(set);
-	gen(OPR, 0, OPR_RET); 
+	gen(OPR, 0, OPR_RET);
 	test(fsys, phi, 8); // test for error: Follow the statement is an incorrect symbol.
 	listcode(cx0, cx);
 } // block
@@ -1498,7 +1512,7 @@ void interpret()
 		case CAL:
 			pc = i.a;
 			break;
-		
+
 		case JPC:
 			if (stack[top] == 0)
 				pc += i.a-1;
@@ -1543,7 +1557,7 @@ int main()
 	ch = ' ';
 	kk = MAXIDLEN;
 	*id = '\0';
-	td = NULL;
+	td = (int*)malloc(MAXDIM*sizeof(int));
 
 	getsym();
 
