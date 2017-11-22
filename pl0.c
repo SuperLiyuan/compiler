@@ -243,7 +243,7 @@ int arraylength()
         if(k>=MAXDIM)
         {
             error(37);    //Too many dimensions
-            set1 = createset(SYM_ADD, SYM_MINUS, SYM_MOD, SYM_AND, SYM_BECOMES, SYM_EQU, SYM_NULL);
+            //set1 = createset(SYM_ADD, SYM_MINUS, SYM_MOD, SYM_AND, SYM_BECOMES, SYM_EQU, SYM_NULL);
             test(set1, facbegsys, 0);
             destroyset(set1);
             break;
@@ -304,17 +304,17 @@ int arraylength()
 }
 
 //////////////////////////////////////////////////////////////////////
-int offset(int a)
-{//calculate and return the offset when using array
-	int i = 0, k = 0, temp[MAXDIM]={0};
+int offset(int a){
 
+//calculate and return the offset when using array
+	int i = 0, k = 0, temp[MAXDIM]={0};
 	while(sym == SYM_LBRKET)
 	{
 		getsym();
 		if(k>=MAXDIM)
         {
             error(37);    //Too many dimensions
-            set1 = createset(SYM_ADD, SYM_MINUS, SYM_MOD, SYM_AND, SYM_BECOMES, SYM_EQU, SYM_NULL);
+            //set1 = createset(SYM_ADD, SYM_MINUS, SYM_MOD, SYM_AND, SYM_BECOMES, SYM_EQU, SYM_NULL);
             test(set1, facbegsys, 0);
             destroyset(set1);
             break;
@@ -378,7 +378,7 @@ int offset(int a)
 		}
 	}
 
-	int sum = 0, bndry = 1;
+	//int sum = 0, bndry = 1;
 	while(k--)
 	{
 		sum += temp[k]*bndry;
@@ -457,7 +457,7 @@ void constdeclaration()
 			if (sym == SYM_LBRACE) //'{'
 			{
 				getsym();
-				value = (int*)malloc(l,sizeof(int));
+				value = (int*)malloc(sizeof(int));
 				int i = 0;
 				do{
 					if (sym == SYM_NUMBER || sym == SYM_IDENTIFIER)
@@ -570,38 +570,12 @@ void listcode(int from, int to)
 } // listcode
 
 //////////////////////////////////////////////////////////////////////
-void proceCall(mask* mk){ // procedure call
-		getsym();
-		if( sym == lparen ){
-			getsym();
-		}
-		else error( );
-
-		for(j=0;j<mk->prodn;i++)
-		{
-
-				if(sym == SYM_RPAREN)
-					break;
-				else {
-					set = uniteset(createset(SYM_RPAREN,SYM_COMMA,SYM_NULL),fsys);
-					top_expr(set);
-
-				}
-				if(sym == SYM_COMMA)
-					getsym();
-		}
-		if(j != mk->prodn)
-			error(34);
-
-		test(createset(SYM_RPAREN,SYM_NULL),createset(SYM_RPAREN,SYM_SEMICOLON,SYM_END,SYM_NULL),34);//"The number of actual parameters and virtual parameters aren't matched or Missing ')'"
-		gen(DIP,level-mk->level,prodn);
-		gen(CAL, 0, mk->address);
-}
-
+void proceCall(mask*,symset);
+void top_expr(symset);
 //////////////////////////////////////////////////////////////////////
 void factor(symset fsys)
-{
-	void top_expr(symset fsys);
+{	
+	top_expr(fsys);
 	int i;
 	symset set;
 
@@ -633,7 +607,7 @@ void factor(symset fsys)
 					    break;
 				    case ID_PROCEDURE:
 						mk = (mask*)&table[i];
-					    proceCall(mk);
+					    proceCall(mk,fsys);
 						break;
 					} // switch
 				}
@@ -980,7 +954,38 @@ void top_expr(symset fsys)              //2017.10.26
 	}
 }
 
+int prodn;
 //////////////////////////////////////////////////////////////////////
+void proceCall(mask* mk,symset fsys){ // procedure call
+		int j;
+		getsym();
+		if( sym == SYM_LPAREN ){
+			getsym();
+		}
+		else error(16);
+
+		for(j=0;j<mk->prodn;j++)
+		{
+
+				if(sym == SYM_RPAREN)
+					break;
+				else {
+					symset set = uniteset(createset(SYM_RPAREN,SYM_COMMA,SYM_NULL),fsys);
+					top_expr(set);
+
+				}
+				if(sym == SYM_COMMA)
+					getsym();
+		}
+		if(j != mk->prodn)
+			error(34);
+
+		test(createset(SYM_RPAREN,SYM_NULL),createset(SYM_RPAREN,SYM_SEMICOLON,SYM_END,SYM_NULL),34);//"The number of actual parameters and virtual parameters aren't matched or Missing ')'"
+		gen(DIP,level-mk->level,mk->prodn);
+		gen(CAL, 0, mk->address);
+}
+
+
 void statement(symset fsys)
 {
 	int i, cx1, cx2, cx3;
@@ -1201,7 +1206,7 @@ void statement(symset fsys)
 		}
 
 		else {//return 1;return 1+x;return fact(n-1);
-			top_expression();//调用后的结果存在栈顶
+			top_expr();//调用后的结果存在栈顶
 			gen(OPR, prodn, OPR_RET);
 			if (sym != SYM_SEMICOLON)
 				error(10);// missing ';'.
@@ -1210,7 +1215,7 @@ void statement(symset fsys)
 	test(fsys, phi, 19);
 } // statement
 
-int prodn;
+
 //////////////////////////////////////////////////////////////////////
 void block(symset fsys)
 {
@@ -1284,7 +1289,7 @@ void block(symset fsys)
 
 			getsym();
 
-			if( sym == IDENTIFIER )
+			if( sym == SYM_IDENTIFIER )
 			{
 				enter(ID_PROCEDURE);
 			}
@@ -1293,15 +1298,15 @@ void block(symset fsys)
 				error(4);
 			}
 			getsym();
-			if( sym == LPAREN )
+			if( sym == SYM_LPAREN )
 				getsym();
 
-			else error();
+			else error(16);
 
 			if(sym == SYM_IDENTIFIER ){
 
 				do{
-					enter( SYM_VARIABLE);   //记录参数名
+					enter( SYM_VAR);   //记录参数名
 					++prodn;
 					getsym();
 					if( sym == SYM_COMMA)
@@ -1310,9 +1315,9 @@ void block(symset fsys)
 				}while(sym == SYM_IDENTIFIER);//处理完所有参数
 			}
 
-			if( sym == RPAREN )
+			if( sym == SYM_RPAREN )
 				getsym();
-			else error();//缺少右括号
+			else error(22);//缺少右括号
 
 			level++;
 			savedTx = tx;

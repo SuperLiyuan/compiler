@@ -3,7 +3,7 @@
 #define NRW        15     // number of reserved words
 #define TXMAX      500    // length of identifier table
 #define MAXNUMLEN  14     // maximum number of digits in numbers
-#define NSYM       13     // maximum number of symbols in array ssym and csym
+#define NSYM       16     // maximum number of symbols in array ssym and csym
 #define MAXIDLEN   10     // length of identifiers
 
 #define MAXADDRESS 32767  // maximum address
@@ -72,7 +72,7 @@ enum idtype
 
 enum opcode
 {
-	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC, EXT, POP
+	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC, EXT, POP,DIP
 };
 
 enum oprcode
@@ -94,7 +94,7 @@ typedef struct
 } instruction;
 
 //////////////////////////////////////////////////////////////////////
-char* err_msg[] =
+const char* err_msg[] =
 {
 /*  0 */    "",
 /*  1 */    "Found ':=' when expecting '='.",
@@ -155,7 +155,7 @@ char line[80];
 
 instruction code[CXMAX];
 
-char* word[NRW + 1] =
+const char* word[NRW + 1] =
 {
 	"", /* place holder */
 	"begin", "call", "const", "do", "end","if",
@@ -182,8 +182,8 @@ char csym[NSYM + 1] =
 	' ', '+', '-', '*', '/', '(', ')', '=', ',', '.', ';','^','%','~','[',']'
 };
 
-#define MAXINS   10
-char* mnemonic[MAXINS] =
+#define MAXINS   12
+const char* mnemonic[MAXINS] =
 {
 	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP","DIP"
 };
