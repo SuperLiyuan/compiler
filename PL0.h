@@ -3,7 +3,7 @@
 #define NRW        15     // number of reserved words
 #define TXMAX      500    // length of identifier table
 #define MAXNUMLEN  14     // maximum number of digits in numbers
-#define NSYM       16     // maximum number of symbols in array ssym and csym
+#define NSYM       18     // maximum number of symbols in array ssym and csym
 #define MAXIDLEN   10     // length of identifiers
 
 #define MAXADDRESS 32767  // maximum address
@@ -61,8 +61,6 @@ enum symtype
 	SYM_RET,
 	SYM_LBRKET,    //'['
 	SYM_RBRKET,    //']'
-	SYM_LBRACE,    //'{'
-	SYM_RBRACE    //'}'
 };
 
 enum idtype
@@ -72,7 +70,7 @@ enum idtype
 
 enum opcode
 {
-	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC, EXT, POP,DIP
+	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC, EXT, POP, DIP, LDA, STA
 };
 
 enum oprcode
@@ -112,7 +110,7 @@ const char* err_msg[] =
 /* 13 */    "':=' expected.",
 /* 14 */    "There must be an identifier to follow the 'call'.",
 /* 15 */    "A constant or variable can not be called.",
-/* 16 */    "'(' or expected.",             //2017.10.14
+/* 16 */    "'(' expected.",             //2017.10.14
 /* 17 */    "';' or 'end' expected.",
 /* 18 */    "'do' expected.",
 /* 19 */    "Incorrect symbol.",
@@ -160,7 +158,7 @@ const char* word[NRW + 1] =
 	"", /* place holder */
 	"begin", "call", "const", "do", "end","if",
 	"odd", "procedure", "then", "var", "while",
-	"else", "exit", "for", "ret"
+	"else", "exit", "for", "return"
 };
 
 int wsym[NRW + 1] =
@@ -174,18 +172,18 @@ int ssym[NSYM + 1] =
 {
 	SYM_NULL, SYM_PLUS, SYM_MINUS, SYM_TIMES, SYM_SLASH,
 	SYM_LPAREN, SYM_RPAREN, SYM_EQU, SYM_COMMA, SYM_PERIOD, SYM_SEMICOLON,
-	SYM_BITXOR, SYM_MOD, SYM_BITNOT, SYM_LBRKET, SYM_RBRKET
+	SYM_BITXOR, SYM_MOD, SYM_BITNOT, SYM_LBRKET, SYM_RBRKET, SYM_BEGIN, SYM_END
 };
 
 char csym[NSYM + 1] =
 {
-	' ', '+', '-', '*', '/', '(', ')', '=', ',', '.', ';','^','%','~','[',']'
+	' ', '+', '-', '*', '/', '(', ')', '=', ',', '.', ';','^','%','~','[',']','{','}'
 };
 
-#define MAXINS   12
+#define MAXINS   14
 const char* mnemonic[MAXINS] =
 {
-	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP","DIP"
+	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP", "DIP", "LDA", "STA"
 };
 
 int *td;   //temporary dimensions

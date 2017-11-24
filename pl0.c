@@ -11,6 +11,7 @@
 #include "PL0.h"
 #include "set.c"
 
+void top_expr(symset);
 //////////////////////////////////////////////////////////////////////
 // print error message.
 void error(int n)
@@ -30,11 +31,6 @@ void getch(void)
 {
 	if (cc == ll)
 	{
-		if (feof(infile))
-		{
-			printf("\nPROGRAM INCOMPLETE\n");
-			exit(1);
-		}
 		ll = cc = 0;
 		printf("%5d  ", cx);
 		while ((!feof(infile)) // added & modified by alex 01-02-09
@@ -45,6 +41,11 @@ void getch(void)
 		} // while
 		printf("\n");
 		line[++ll] = ' ';
+		if (feof(infile))
+		{
+			printf("\nPROGRAM INCOMPLETE\n");
+			exit(1);
+		}
 	}
 	ch = line[++cc];
 } // getch
@@ -179,11 +180,6 @@ void getsym(void)
 		}
 		else sym = SYM_SLASH;
 	}
-	else if(ch == -1)
-	{
-		error(31);  //incomplete program
-		exit(1);
-	}
 	else
 	{ // other tokens
 		i = NSYM;
@@ -234,8 +230,9 @@ void test(symset s1, symset s2, int n)
 
 //////////////////////////////////////////////////////////////////////
 int arraylength()
-{//calculate and return length of an array
-    int i = 0, l = 1, k = 0;   //length
+{//calculate and return length of an array when declare
+    //printf("enter arraylength\n");
+    int i = 0, sum = 1, k = 0;   //length
     symset set,set1;
 
 	while(sym == SYM_LBRKET){  //'['
@@ -276,7 +273,6 @@ int arraylength()
 				}
 			}
 
-			l *= num;
 			td[k++] = num;
 
 			getsym();
@@ -300,12 +296,62 @@ int arraylength()
 			destroyset(set);
 		}
 	}
-	return l;
+	while(k--)
+    {
+        i = td[k];
+        td[k] = sum;
+        //printf("td[%d] = %d\n",k,sum);
+        sum *= i;
+    }
+	return sum;
 }
 
 //////////////////////////////////////////////////////////////////////
-int offset(int a){
+int varoffset(int a, symset fsys)
+{//calculate and return the offset when using var array
+	int i = 0, k = 0, temp[MAXDIM]={0}, IsArray=0;
+	symset set, set1, set2;
 
+
+    set = createset(SYM_RBRKET, SYM_NULL);
+    set1 = uniteset(set, fsys);
+	while(sym == SYM_LBRKET)
+	{
+	    IsArray = 1;
+		getsym();
+		if(k>=MAXDIM)
+        {
+            error(37);    //Too many dimensions
+            set2 = createset(SYM_PLUS, SYM_MINUS, SYM_MOD, SYM_AND, SYM_BECOMES, SYM_EQU, SYM_NULL);
+            test(set2, facbegsys, 0);
+            destroyset(set1);
+            break;
+        }
+        top_expr(set1);
+        gen(LIT, 0, table[a].dim[k++]);
+        gen(OPR, 0, OPR_MUL);
+
+        if(sym == SYM_RBRKET) //']'
+        {
+            getsym();
+        }
+        else
+        {
+            error(22); //Missing ')' or ']'
+        }
+	}
+	if(k) k--; // k = dimension - 1
+    while(k--)
+    {
+        gen(OPR, 0, OPR_ADD);
+    }
+
+	//printf("quit offset with sym == %d\n", sym);
+	return IsArray;
+}//varoffset
+
+//////////////////////////////////////////////////////////////////////
+int constoffset(int a){
 //calculate and return the offset when using array
 	int i = 0, k = 0, temp[MAXDIM]={0};
 	while(sym == SYM_LBRKET)
@@ -314,7 +360,8 @@ int offset(int a){
 		if(k>=MAXDIM)
         {
             error(37);    //Too many dimensions
-            //set1 = createset(SYM_ADD, SYM_MINUS, SYM_MOD, SYM_AND, SYM_BECOMES, SYM_EQU, SYM_NULL);
+            symset set1;
+            set1 = createset(SYM_PLUS, SYM_MINUS, SYM_MOD, SYM_AND, SYM_BECOMES, SYM_EQU, SYM_NULL);
             test(set1, facbegsys, 0);
             destroyset(set1);
             break;
@@ -378,20 +425,21 @@ int offset(int a){
 		}
 	}
 
-	//int sum = 0, bndry = 1;
+	int sum = 0, bndry = 1;
 	while(k--)
 	{
 		sum += temp[k]*bndry;
 		bndry *= table[a].dim[k];
 	}
+	//printf("quit offset with sym == %d\n", sym);
 	return sum;
-}
+}//constoffset
 
 //////////////////////////////////////////////////////////////////////
 int constvalue(int a)
 {//find and return the value of const
-	return table[a].value[offset(a)];
-}
+	return table[a].value[constoffset(a)];
+}//constvalue
 
 //////////////////////////////////////////////////////////////////////
 int dx;  // data allocation index
@@ -454,7 +502,7 @@ void constdeclaration()
 			if (sym == SYM_BECOMES)
 				error(1); // Found ':=' when expecting '='.
 			getsym();
-			if (sym == SYM_LBRACE) //'{'
+			if (sym == SYM_BEGIN) //'{'
 			{
 				getsym();
 				value = (int*)malloc(sizeof(int));
@@ -467,7 +515,7 @@ void constdeclaration()
 							error(33);  //too many initializers
 							getsym();
 							symset set1,set;
-							set1 = createset(SYM_RBRACE, SYM_COMMA, SYM_NULL);
+							set1 = createset(SYM_END, SYM_COMMA, SYM_NULL);
 							set = createset(SYM_VAR, SYM_PROCEDURE, SYM_IDENTIFIER, SYM_BEGIN, SYM_NULL);
 							test(set1, set, 0);
 							destroyset(set);
@@ -503,7 +551,7 @@ void constdeclaration()
 				{
 					value[k++] = 0;
 				}
-				if(sym == SYM_RBRACE) //'}'
+				if(sym == SYM_END) //'}'
 				{
 					getsym();
 				}
@@ -547,7 +595,6 @@ int vardeclaration(void)
 
 		enter(ID_VARIABLE);
 		dx += l;
-		getsym();
 	}
 	else
 	{
@@ -571,11 +618,9 @@ void listcode(int from, int to)
 
 //////////////////////////////////////////////////////////////////////
 void proceCall(mask*,symset);
-void top_expr(symset);
 //////////////////////////////////////////////////////////////////////
 void factor(symset fsys)
-{	
-	top_expr(fsys);
+{
 	int i;
 	symset set;
 
@@ -584,7 +629,7 @@ void factor(symset fsys)
 		factflag = 0;
 	}
 	else{
-	    while (inset(sym, facbegsys))
+	    if (inset(sym, facbegsys))
 	    {
 		    if (sym == SYM_IDENTIFIER)
 		    {
@@ -603,7 +648,10 @@ void factor(symset fsys)
 					    break;
 				    case ID_VARIABLE:
 					    mk = (mask*)&table[i];
-					    gen(LOD, level - mk->level, (mk->address)+offset(i));
+					    if(varoffset(i, fsys))
+                            gen(LDA, level-mk->level, mk->address);
+                        else
+                            gen(LOD, level-mk->level, mk->address);
 					    break;
 				    case ID_PROCEDURE:
 						mk = (mask*)&table[i];
@@ -914,7 +962,7 @@ void or_expr(symset fsys)
 //////////////////////////////////////////////////////////////////////
 void top_expr(symset fsys)              //2017.10.26
 {
-	int i;
+	int i, temp;
 	test(facbegsys, fsys, 24); // The symbol can not be as the beginning of an expression.
 
 	if (sym == SYM_IDENTIFIER)
@@ -927,18 +975,24 @@ void top_expr(symset fsys)              //2017.10.26
 		else if (table[i].kind == ID_VARIABLE)
 		{
 			mk = (mask*)&table[i];
-			gen(LOD, level - mk->level, (mk->address)+offset(i));
 			getsym();
+			int IsArray = varoffset(i, fsys);
+			if(IsArray)
+                gen(LDA, level-mk->level, mk->address);
+            else
+                gen(LOD, level-mk->level, mk->address);
 			if (sym == SYM_BECOMES)
 			{// assignment expression
 				getsym();
 				cx--;    //delete LOD instruction
 				top_expr(fsys);
-				gen(STO, level - mk->level, (mk->address)+offset(i));
+				if(IsArray)
+                    gen(STA, level - mk->level, mk->address);
+                else
+                    gen(STO, level - mk->level, mk->address);
 			}
 			else
 			{
-
 				factflag = 1; // means a operant already LODed
 				or_expr(fsys);
 			}
@@ -956,38 +1010,60 @@ void top_expr(symset fsys)              //2017.10.26
 
 int prodn;
 //////////////////////////////////////////////////////////////////////
-void proceCall(mask* mk,symset fsys){ // procedure call
+void proceCall(mask* mk,symset fsys){ // procedure call, critical
 		int j;
-		getsym();
+		symset set,set1;
+        //printf("proceID = %s, prodn = %d\n",mk->name,mk->prodn);
+		set1 = createset(SYM_RPAREN,SYM_COMMA,SYM_NULL);
+		set = uniteset(set1,fsys);
+
 		if( sym == SYM_LPAREN ){
-			getsym();
+            j = 0;
+            do{
+                getsym();
+
+                if(++j > mk->prodn)
+                    break;
+
+                if(sym == SYM_RPAREN)
+                {
+                    break;
+                }
+                top_expr(set);
+
+            }while(sym == SYM_COMMA);
+            if(sym == SYM_RPAREN && j <= mk->prodn)
+            {
+                getsym();
+            }
+            else
+                error(22);
 		}
-		else error(16);
+		else
+            error(16);  //'(' expected
 
-		for(j=0;j<mk->prodn;j++)
-		{
 
-				if(sym == SYM_RPAREN)
-					break;
-				else {
-					symset set = uniteset(createset(SYM_RPAREN,SYM_COMMA,SYM_NULL),fsys);
-					top_expr(set);
+        destroyset(set);
+        destroyset(set1);
+		if(j > mk->prodn)
+        {
+			error(34); //"The number of actual parameters and virtual parameters aren't matched or Missing ')'"
+			set = createset(SYM_RPAREN,SYM_NULL);
+			set1 = createset(SYM_RPAREN,SYM_SEMICOLON,SYM_END,SYM_NULL);
+			test(set,set1,0);
+            destroyset(set);
+            destroyset(set1);
+        }
 
-				}
-				if(sym == SYM_COMMA)
-					getsym();
-		}
-		if(j != mk->prodn)
-			error(34);
 
-		test(createset(SYM_RPAREN,SYM_NULL),createset(SYM_RPAREN,SYM_SEMICOLON,SYM_END,SYM_NULL),34);//"The number of actual parameters and virtual parameters aren't matched or Missing ')'"
 		gen(DIP,level-mk->level,mk->prodn);
 		gen(CAL, 0, mk->address);
 }
 
-
+//////////////////////////////////////////////////////////////////////
 void statement(symset fsys)
 {
+    //printf("enter statement\n");
 	int i, cx1, cx2, cx3;
 	int temp,tmpnum;
 	symset set1, set;
@@ -1203,18 +1279,19 @@ void statement(symset fsys)
 		if (sym == SYM_SEMICOLON) {//return; 则把0放在被调用的栈顶，然后再放到原栈栈顶
 			gen(LIT, 0, 0);
 			gen(OPR, prodn, OPR_RET);
+			getsym();
 		}
-
 		else {//return 1;return 1+x;return fact(n-1);
-			top_expr();//调用后的结果存在栈顶
+			top_expr(fsys);//调用后的结果存在栈顶
 			gen(OPR, prodn, OPR_RET);
 			if (sym != SYM_SEMICOLON)
 				error(10);// missing ';'.
+            else
+                getsym();
 		}
 	}
 	test(fsys, phi, 19);
 } // statement
-
 
 //////////////////////////////////////////////////////////////////////
 void block(symset fsys)
@@ -1225,10 +1302,11 @@ void block(symset fsys)
 	int savedTx;
 	symset set1, set;
 
-	mk = (mask*)&table[tx];
+	mk = (mask*)&table[tx-prodn];  //a critical bug appeared here
 	mk->address = cx;
-	dx = 3+mk->prodn;
-	block_dx = dx;
+	mk->prodn = prodn;  //critical
+	dx = 3;
+	//block_dx = dx;
 
 	gen(JMP, 0, 0);
 	if (level > MAXLEVEL)
@@ -1282,10 +1360,10 @@ void block(symset fsys)
 		} // if
 		block_dx = dx; //save dx before handling procedure call!
 
-		while( sym == SYM_PROCEDURE )
+		if( sym == SYM_PROCEDURE )
 		{
-			dx = 0;
-			int prodn = 0;
+			int k;
+			char argumentID[TXMAX][MAXIDLEN+1]={0},proceID[MAXIDLEN+1]={0};
 
 			getsym();
 
@@ -1297,6 +1375,10 @@ void block(symset fsys)
 			{
 				error(4);
 			}
+
+			savedTx = tx;   //critical
+			level++;        //critical
+
 			getsym();
 			if( sym == SYM_LPAREN )
 				getsym();
@@ -1306,21 +1388,26 @@ void block(symset fsys)
 			if(sym == SYM_IDENTIFIER ){
 
 				do{
-					enter( SYM_VAR);   //记录参数名
-					++prodn;
+					strcpy(argumentID[prodn++], id);  //记录参数名
 					getsym();
 					if( sym == SYM_COMMA)
+                        getsym();
 
-					getsym();
 				}while(sym == SYM_IDENTIFIER);//处理完所有参数
 			}
+			//printf("prodn = %d\n",prodn);
+			k = prodn;
+			while(k)
+            {
+                dx = -k;     //b指向静态链，则实参dx为负数
+                strcpy(id, argumentID[prodn-(k--)]);
+                enter(ID_VARIABLE);
+            }
 
 			if( sym == SYM_RPAREN )
 				getsym();
 			else error(22);//缺少右括号
 
-			level++;
-			savedTx = tx;
 			set1 = createset(SYM_SEMICOLON, SYM_NULL);
 			set = uniteset(set1, fsys);
 			block(set);
@@ -1332,11 +1419,11 @@ void block(symset fsys)
 			if (sym == SYM_SEMICOLON)
 			{
 				getsym();
-				set1 = createset(SYM_IDENTIFIER/*为什么有id*/, SYM_PROCEDURE, SYM_NULL);
+				/*set1 = createset(SYM_IDENTIFIER, SYM_PROCEDURE, SYM_NULL);
 				set = uniteset(statbegsys, set1);
 				test(set, fsys, 6);
 				destroyset(set1);
-				destroyset(set);
+				destroyset(set);*/
 			}
 			else
 			{
@@ -1344,17 +1431,19 @@ void block(symset fsys)
 			}
 		} // while
 		dx = block_dx; //restore dx after handling procedure declaration! dx是参数和局部变量的总个数
-		set1 = createset(SYM_IDENTIFIER, SYM_NULL);
-		set = uniteset(statbegsys, set1);
-		test(set, declbegsys, 7);
-		destroyset(set1);
-		destroyset(set);
-	} while (inset(sym, declbegsys));//正常的情况下，此处while不会循环第二次？
+
+	} while (inset(sym, declbegsys));
+
+	set1 = createset(SYM_IDENTIFIER, SYM_NULL);
+    set = uniteset(statbegsys, set1);
+    test(set, declbegsys, 7);
+    destroyset(set1);
+    destroyset(set);
 
 	code[mk->address].a = cx-(mk->address);
 	mk->address = cx;
 	cx0 = cx;//why save
-	gen(INT, 0, dx-mk->prodn);//原本是block，改成dx
+	gen(INT, 0, dx);
 	set1 = createset(SYM_SEMICOLON, SYM_END, SYM_NULL);
 	set = uniteset(set1, fsys);
 	prodn = mk->prodn;
@@ -1390,10 +1479,11 @@ void interpret()
 
 	pc = 0;
 	b = 1;
-	top = 3;
+	top = 0;
 	stack[1] = stack[2] = stack[3] = 0;
 	do
 	{
+	    //printf("pc = %d\n",pc);
 		i = code[pc++];
 		switch (i.f)
 		{
@@ -1404,9 +1494,9 @@ void interpret()
 			switch (i.a) // operator
 			{
 			case OPR_RET: //put the return value in stack[b],since the SL isn't useful anymore,no need to worry that it may be covered.
-				stack[b] = stack[top];
-				top = b;
-				pc = stack[top + i.l + 2];
+				pc = stack[b+2];
+				stack[b-i.l] = stack[top];
+				top = b-i.l;
 				b = stack[top + i.l + 1];
 				break;
 			case OPR_NOT: //2017-09-24
@@ -1494,11 +1584,22 @@ void interpret()
 			break;
 		case LOD:
 			stack[++top] = stack[base(stack, b, i.l) + i.a];
+			//printf("%d from [%d] to [%d]\n", stack[top], base(stack, b, i.l) + i.a,top);
 			break;
+        case LDA:
+            //printf("%d from [%d]\n",stack[base(stack,b,i.l)+i.a+stack[top]],base(stack,b,i.l)+i.a+stack[top]);
+            stack[top] = stack[base(stack,b,i.l) + i.a + stack[top]];
+            break;
 		case STO:
 			stack[base(stack, b, i.l) + i.a] = stack[top];
-			printf("%d\n", stack[top]);
+			printf("STO %d to stack[%d]\n", stack[top], base(stack, b, i.l) + i.a);
 			break;
+        case STA:
+            stack[base(stack, b, i.l) + i.a + stack[top-1]] = stack[top];
+            printf("STO %d to stack[%d]\n", stack[top],base(stack, b, i.l) + i.a + stack[top-1]);
+            stack[top-1] = stack[top];
+            top--;
+            break;
 		case INT:
 			top += i.a;
 			break;
@@ -1512,7 +1613,7 @@ void interpret()
 			stack[top+1] = base(stack ,b, i.l);
 			stack[top+2] = b;
 			stack[top+3] = pc+1;
-			b = top-i.a;
+			b = top+1;
 			break;
 		case CAL:
 			pc = i.a;
@@ -1525,8 +1626,10 @@ void interpret()
 			break;
 		case EXT:                      //2017.10.25
 			pc = 0;
+			printf("Exit Program\n");
 			break;
 		} // switch
+		//printf("pc = %d, top = %d\n",pc,top);
 	} while (pc);
 
 	printf("End executing PL/0 program.\n");
@@ -1554,7 +1657,7 @@ int main()
 	// create begin symbol sets
 	declbegsys = createset(SYM_CONST, SYM_VAR, SYM_PROCEDURE, SYM_NULL);
 	facbegsys = createset(SYM_IDENTIFIER, SYM_NUMBER, SYM_LPAREN, SYM_MINUS, SYM_ODD, SYM_NOT, SYM_BITNOT, SYM_NULL);
-	set = createset(SYM_BEGIN, SYM_CALL, SYM_IF, SYM_WHILE, SYM_FOR, SYM_EXIT, SYM_NULL);
+	set = createset(SYM_BEGIN, SYM_CALL, SYM_IF, SYM_WHILE, SYM_FOR, SYM_EXIT, SYM_RET, SYM_NULL);
 	statbegsys = uniteset(facbegsys, set);
 	destroyset(set);
 
