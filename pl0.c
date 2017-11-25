@@ -1290,6 +1290,38 @@ void statement(symset fsys)
                 getsym();
 		}
 	}
+	else if (sym == SYM_PRINT)
+    {
+        getsym();
+        if (sym == SYM_LPAREN)
+            getsym();
+        else
+            error(16);   //'(' expected
+        set1 = createset(SYM_RPAREN, SYM_COMMA, SYM_NULL);
+        set = uniteset(set1, fsys);
+        if(sym == SYM_RPAREN)
+        {
+            getsym();
+            gen(PRT, 0, 0);
+        }
+        else
+        {
+            while(inset(sym, facbegsys)){
+                top_expr(set);
+                gen(PRT, 0, 1);
+                if(sym == SYM_COMMA)
+                    getsym();
+            }
+            if(sym == SYM_RPAREN)
+                getsym();
+            else
+                error(22);  //Missing ')'
+        }
+        if(sym == SYM_SEMICOLON)
+            getsym();
+        else
+            error(10);   //';' expected
+    }
 	test(fsys, phi, 19);
 } // statement
 
@@ -1450,7 +1482,8 @@ void block(symset fsys)
 	statement(set);
 	destroyset(set1);
 	destroyset(set);
-	gen(OPR, 0, OPR_RET);
+	gen(LIT, 0, 0);
+	gen(OPR, prodn, OPR_RET);
 	test(fsys, phi, 8); // test for error: Follow the statement is an incorrect symbol.
 	listcode(cx0, cx);
 } // block
@@ -1496,6 +1529,7 @@ void interpret()
 			case OPR_RET: //put the return value in stack[b],since the SL isn't useful anymore,no need to worry that it may be covered.
 				pc = stack[b+2];
 				stack[b-i.l] = stack[top];
+				//printf("ret %d from [%d] to [%d]\n",stack[top],top,b-i.l);
 				top = b-i.l;
 				b = stack[top + i.l + 1];
 				break;
@@ -1515,10 +1549,12 @@ void interpret()
 				break;
 			case OPR_ADD:
 				top--;
+				//printf("add [%d]=%d, [%d]=%d\n",top,stack[top],top+1,stack[top+1]);
 				stack[top] += stack[top + 1];
 				break;
 			case OPR_MIN:
 				top--;
+				//printf("min [%d]=%d, [%d]=%d\n",top,stack[top],top+1,stack[top+1]);
 				stack[top] -= stack[top + 1];
 				break;
 			case OPR_MUL:
@@ -1592,11 +1628,11 @@ void interpret()
             break;
 		case STO:
 			stack[base(stack, b, i.l) + i.a] = stack[top];
-			printf("STO %d to stack[%d]\n", stack[top], base(stack, b, i.l) + i.a);
+			//printf("STO %d to stack[%d]\n", stack[top], base(stack, b, i.l) + i.a);
 			break;
         case STA:
             stack[base(stack, b, i.l) + i.a + stack[top-1]] = stack[top];
-            printf("STO %d to stack[%d]\n", stack[top],base(stack, b, i.l) + i.a + stack[top-1]);
+            //printf("STO %d to stack[%d]\n", stack[top],base(stack, b, i.l) + i.a + stack[top-1]);
             stack[top-1] = stack[top];
             top--;
             break;
@@ -1628,11 +1664,17 @@ void interpret()
 			pc = 0;
 			printf("Exit Program\n");
 			break;
+        case PRT:
+            if(i.a)
+                printf("%d  ",stack[top--]);
+            else
+                printf("\n");
+            break;
 		} // switch
 		//printf("pc = %d, top = %d\n",pc,top);
 	} while (pc);
 
-	printf("End executing PL/0 program.\n");
+	printf("\nEnd executing PL/0 program.\n");
 } // interpret
 
 //////////////////////////////////////////////////////////////////////
@@ -1657,7 +1699,7 @@ int main()
 	// create begin symbol sets
 	declbegsys = createset(SYM_CONST, SYM_VAR, SYM_PROCEDURE, SYM_NULL);
 	facbegsys = createset(SYM_IDENTIFIER, SYM_NUMBER, SYM_LPAREN, SYM_MINUS, SYM_ODD, SYM_NOT, SYM_BITNOT, SYM_NULL);
-	set = createset(SYM_BEGIN, SYM_CALL, SYM_IF, SYM_WHILE, SYM_FOR, SYM_EXIT, SYM_RET, SYM_NULL);
+	set = createset(SYM_BEGIN, SYM_CALL, SYM_IF, SYM_WHILE, SYM_FOR, SYM_EXIT, SYM_RET, SYM_PRINT, SYM_NULL);
 	statbegsys = uniteset(facbegsys, set);
 	destroyset(set);
 
@@ -1695,7 +1737,7 @@ int main()
 		interpret();
 	else
 		printf("There are %d error(s) in PL/0 program.\n", err);
-	listcode(0, cx);
+	//listcode(0, cx);
 } // main
 
 //////////////////////////////////////////////////////////////////////

@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define NRW        15     // number of reserved words
+#define NRW        16     // number of reserved words
 #define TXMAX      500    // length of identifier table
 #define MAXNUMLEN  14     // maximum number of digits in numbers
 #define NSYM       18     // maximum number of symbols in array ssym and csym
@@ -61,6 +61,7 @@ enum symtype
 	SYM_RET,
 	SYM_LBRKET,    //'['
 	SYM_RBRKET,    //']'
+	SYM_PRINT
 };
 
 enum idtype
@@ -70,7 +71,7 @@ enum idtype
 
 enum opcode
 {
-	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC, EXT, POP, DIP, LDA, STA
+	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC, EXT, POP, DIP, LDA, STA, PRT
 };
 
 enum oprcode
@@ -111,12 +112,12 @@ const char* err_msg[] =
 /* 14 */    "There must be an identifier to follow the 'call'.",
 /* 15 */    "A constant or variable can not be called.",
 /* 16 */    "'(' expected.",             //2017.10.14
-/* 17 */    "';' or 'end' expected.",
-/* 18 */    "'do' expected.",
+/* 17 */    "';' or '}' expected.",
+/* 18 */    "Missing ']'.",
 /* 19 */    "Incorrect symbol.",
 /* 20 */    "Relative operators expected.",
 /* 21 */    "Procedure identifier can not be in an expression.",
-/* 22 */    "Missing ')' or ']'.",
+/* 22 */    "Missing ')'.",
 /* 23 */    "The symbol can not be followed by a factor.",
 /* 24 */    "The symbol can not be as the beginning of an expression.",
 /* 25 */    "The number is too great.",
@@ -158,14 +159,14 @@ const char* word[NRW + 1] =
 	"", /* place holder */
 	"begin", "call", "const", "do", "end","if",
 	"odd", "procedure", "then", "var", "while",
-	"else", "exit", "for", "return"
+	"else", "exit", "for", "return", "print"
 };
 
 int wsym[NRW + 1] =
 {
 	SYM_NULL, SYM_BEGIN, SYM_CALL, SYM_CONST, SYM_DO, SYM_END,
 	SYM_IF, SYM_ODD, SYM_PROCEDURE, SYM_THEN, SYM_VAR, SYM_WHILE,
-    SYM_ELSE, SYM_EXIT, SYM_FOR, SYM_RET
+    SYM_ELSE, SYM_EXIT, SYM_FOR, SYM_RET, SYM_PRINT
 };
 
 int ssym[NSYM + 1] =
@@ -183,7 +184,7 @@ char csym[NSYM + 1] =
 #define MAXINS   14
 const char* mnemonic[MAXINS] =
 {
-	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP", "DIP", "LDA", "STA"
+	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP", "DIP", "LDA", "STA", "PRT"
 };
 
 int *td;   //temporary dimensions
