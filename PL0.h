@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define NRW        16     // number of reserved words
+#define NRW        14     // number of reserved words
 #define TXMAX      500    // length of identifier table
 #define MAXNUMLEN  14     // maximum number of digits in numbers
 #define NSYM       18     // maximum number of symbols in array ssym and csym
@@ -24,7 +24,6 @@ enum symtype
 	SYM_MINUS,
 	SYM_TIMES,
 	SYM_SLASH,
-	SYM_ODD,
 	SYM_EQU,
 	SYM_NEQ,
 	SYM_LES,
@@ -40,7 +39,6 @@ enum symtype
     SYM_BEGIN,
 	SYM_END,
 	SYM_IF,
-	SYM_THEN,
 	SYM_WHILE,
 	SYM_DO,
 	SYM_CALL,
@@ -157,16 +155,16 @@ instruction code[CXMAX];
 const char* word[NRW + 1] =
 {
 	"", /* place holder */
-	"begin", "call", "const", "do", "end","if",
-	"odd", "procedure", "then", "var", "while",
-	"else", "exit", "for", "return", "print"
+	"begin", "call", "const", "end", "if",
+	"procedure", "var", "while", "else", "do",
+	"exit", "for", "return", "print"
 };
 
 int wsym[NRW + 1] =
 {
-	SYM_NULL, SYM_BEGIN, SYM_CALL, SYM_CONST, SYM_DO, SYM_END,
-	SYM_IF, SYM_ODD, SYM_PROCEDURE, SYM_THEN, SYM_VAR, SYM_WHILE,
-    SYM_ELSE, SYM_EXIT, SYM_FOR, SYM_RET, SYM_PRINT
+	SYM_NULL, SYM_BEGIN, SYM_CALL, SYM_CONST, SYM_END,
+	SYM_IF, SYM_PROCEDURE, SYM_VAR, SYM_WHILE, SYM_ELSE, SYM_DO,
+	SYM_EXIT, SYM_FOR, SYM_RET, SYM_PRINT
 };
 
 int ssym[NSYM + 1] =

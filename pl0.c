@@ -136,12 +136,12 @@ void getsym(void)
         getch();
         if(ch == '=')
         {
-            sym = SYM_NEQ;
+            sym = SYM_NEQ;     // !=
             getch();
         }
         else
         {
-            sym = SYM_NOT;
+            sym = SYM_NOT;     // !
         }
     }
 	else if (ch == '|') //2017-09-24
@@ -167,7 +167,7 @@ void getsym(void)
 		getch();
 		if (ch == '/') { cc = ll; getch(); getsym(); } // line comment
 		else if (ch == '*') { // block-comment
-			getch(); //skip '*'
+			getch();
 			while (1) {
 				if (ch == '*') {
 					getch();
@@ -231,8 +231,7 @@ void test(symset s1, symset s2, int n)
 //////////////////////////////////////////////////////////////////////
 int arraylength()
 {//calculate and return length of an array when declare
-    //printf("enter arraylength\n");
-    int i = 0, sum = 1, k = 0;   //length
+    int i = 0, sum = 1, k = 0;
     symset set,set1;
 
 	while(sym == SYM_LBRKET){  //'['
@@ -240,7 +239,7 @@ int arraylength()
         if(k>=MAXDIM)
         {
             error(37);    //Too many dimensions
-            //set1 = createset(SYM_ADD, SYM_MINUS, SYM_MOD, SYM_AND, SYM_BECOMES, SYM_EQU, SYM_NULL);
+            set1 = createset(SYM_PLUS, SYM_MINUS, SYM_MOD, SYM_AND, SYM_BECOMES, SYM_EQU, SYM_NULL);
             test(set1, facbegsys, 0);
             destroyset(set1);
             break;
@@ -304,7 +303,7 @@ int arraylength()
         sum *= i;
     }
 	return sum;
-}
+}//arraylength
 
 //////////////////////////////////////////////////////////////////////
 int varoffset(int a, symset fsys)
@@ -394,14 +393,7 @@ int constoffset(int a){
 				}
 			}
 
-			if(num+1 && num < table[a].dim[k])
-			{
-				temp[k++] = num;
-			}
-			else
-			{
-				error(36); //Out of array boundary.
-			}
+			temp[k++] = num;
 
 			getsym();
 			if(sym == SYM_RBRKET) //']'
@@ -425,11 +417,11 @@ int constoffset(int a){
 		}
 	}
 
-	int sum = 0, bndry = 1;
+	int sum = 0;
 	while(k--)
 	{
-		sum += temp[k]*bndry;
-		bndry *= table[a].dim[k];
+		sum += temp[k]*table[a].dim[k];
+		//printf("temp[%d]=%d, dim[%d]=%d\n",k,temp[k],k,table[a].dim[k]);
 	}
 	//printf("quit offset with sym == %d\n", sym);
 	return sum;
@@ -490,8 +482,10 @@ int position(char* id)
 void constdeclaration()
 {
 	int l = 1, k = 0;
+	char id0[MAXIDLEN+1];
 	if (sym == SYM_IDENTIFIER)
 	{
+	    strcpy(id0,id);
 		getsym();
 		if (sym == SYM_LBRKET) //'['
 		{
@@ -505,9 +499,9 @@ void constdeclaration()
 			if (sym == SYM_BEGIN) //'{'
 			{
 				getsym();
-				value = (int*)malloc(sizeof(int));
+				value = (int*)malloc(l*sizeof(int));
 				int i = 0;
-				do{
+				while(sym == SYM_NUMBER || sym == SYM_IDENTIFIER){
 					if (sym == SYM_NUMBER || sym == SYM_IDENTIFIER)
 					{
 						if(!(l--))
@@ -546,7 +540,9 @@ void constdeclaration()
 					{
 						error(2); // There must be a number or const to follow '='.
 					}
-				}while(sym == SYM_COMMA);
+					if(sym == SYM_COMMA)
+                        getsym();
+				}
 				while(l--) //fill the rest of array by 0
 				{
 					value[k++] = 0;
@@ -570,6 +566,7 @@ void constdeclaration()
 			{
 				error(2); // There must be a number to follow '='.
 			}
+			strcpy(id,id0);
 			enter(ID_CONSTANT);
 		}
 		else
@@ -680,25 +677,19 @@ void factor(symset fsys)
 					error(22); // Missing ')'.
 				}
 			}
-			else if (sym == SYM_MINUS) // UMINUS,  Expr -> '-' Expr
+			else if (sym == SYM_MINUS) // factor -> '-' factor
 			{
 				getsym();
 				factor(fsys);          //2017.10.13
 				gen(OPR, 0, OPR_NEG);
 			}
-			else if (sym == SYM_NOT) // UMINUS,  Expr -> '!' Expr
+			else if (sym == SYM_NOT) // factor -> '!' factor
 			{
 				getsym();
 				factor(fsys);          //2017.10.13
 				gen(OPR, 0, OPR_NOT);
 			}
-			else if (sym == SYM_ODD) //2017-09-24
-			{
-				getsym();
-				factor(fsys);          //2017.10.13
-				gen(OPR, 0, OPR_ODD);
-			}
-			else if (sym == SYM_BITNOT)
+			else if (sym == SYM_BITNOT)  // factor -> '~' factor
 			{
 				getsym();
 				factor(fsys);
@@ -772,15 +763,6 @@ void rel_expr(symset fsys) //condition
 	int relop;
 	symset set;
 
-	/* //2017-0924
-	if (sym == SYM_ODD)
-	{
-		getsym();
-		expression(fsys);
-		gen(OPR, 0, 6);
-	}
-	else
-	*/
 	{
 		set = uniteset(relset, fsys);
 		expression(set);
@@ -811,7 +793,7 @@ void rel_expr(symset fsys) //condition
 				gen(OPR, 0, OPR_LEQ);
 				break;
 			} // switch
-		} // else
+		} // if
 		destroyset(set);
 	} // else
 } // rel_expr , condition
@@ -971,6 +953,8 @@ void top_expr(symset fsys)              //2017.10.26
 		if (!(i = position(id)))
 		{
 			error(11); // Undeclared identifier.
+			getsym();
+			test(facbegsys, fsys, 0);
 		}
 		else if (table[i].kind == ID_VARIABLE)
 		{
@@ -1022,22 +1006,22 @@ void proceCall(mask* mk,symset fsys){ // procedure call, critical
             do{
                 getsym();
 
-                if(++j > mk->prodn)
-                    break;
-
                 if(sym == SYM_RPAREN)
                 {
                     break;
                 }
                 top_expr(set);
+                j++;
 
-            }while(sym == SYM_COMMA);
+            }while(sym == SYM_COMMA && j <= mk->prodn);
             if(sym == SYM_RPAREN && j <= mk->prodn)
             {
                 getsym();
             }
             else
-                error(22);
+            {
+                error(22); //missing ')'
+            }
 		}
 		else
             error(16);  //'(' expected
@@ -1045,20 +1029,21 @@ void proceCall(mask* mk,symset fsys){ // procedure call, critical
 
         destroyset(set);
         destroyset(set1);
-		if(j > mk->prodn)
+		if(j != mk->prodn)
         {
 			error(34); //"The number of actual parameters and virtual parameters aren't matched or Missing ')'"
-			set = createset(SYM_RPAREN,SYM_NULL);
-			set1 = createset(SYM_RPAREN,SYM_SEMICOLON,SYM_END,SYM_NULL);
-			test(set,set1,0);
-            destroyset(set);
-            destroyset(set1);
+			if(j > mk->prodn){
+                set = createset(SYM_RPAREN,SYM_NULL);
+                set1 = createset(SYM_RPAREN,SYM_SEMICOLON,SYM_END,SYM_NULL);
+                test(set,set1,0);
+                destroyset(set);
+                destroyset(set1);
+			}
         }
-
 
 		gen(DIP,level-mk->level,mk->prodn);
 		gen(CAL, 0, mk->address);
-}
+}//proceCall
 
 //////////////////////////////////////////////////////////////////////
 void statement(symset fsys)
@@ -1091,7 +1076,7 @@ void statement(symset fsys)
 		getsym();
 		set1 = createset(SYM_RPAREN, SYM_NULL);
 		set = uniteset(set1, fsys);
-		or_expr(set);//condition(set);
+		top_expr(set);//condition(set);
 		destroyset(set1);
 		destroyset(set);
 
@@ -1113,13 +1098,13 @@ void statement(symset fsys)
 		if (sym == SYM_ELSE)                         //2017.10.22
 		{
 			gen(JMP, 0, 0);
-			code[cx1].a = cx-cx1;
+			code[cx1].a = cx-cx1;  //code[cx1] = JPC, 0, cx-cx1
 			cx1 = cx - 1;          //cx1 = JMP,0,0
 			getsym();
 			statement(fsys);
 			code[cx1].a = cx-cx1;
 		}
-		else if (inset(sym, statbegsys))
+		else
 		{
 			code[cx1].a = cx-cx1;     //cx1 = JPC,0,0
 		}
@@ -1225,7 +1210,7 @@ void statement(symset fsys)
                 }
             }
         }
-	}
+	} // sym == SYM_FOR
 	else if (sym == SYM_WHILE)
 	{ // while statement
 		cx1 = cx;
@@ -1414,9 +1399,9 @@ void block(symset fsys)
 			getsym();
 			if( sym == SYM_LPAREN )
 				getsym();
-
 			else error(16);
 
+			prodn = 0;
 			if(sym == SYM_IDENTIFIER ){
 
 				do{
@@ -1451,18 +1436,13 @@ void block(symset fsys)
 			if (sym == SYM_SEMICOLON)
 			{
 				getsym();
-				/*set1 = createset(SYM_IDENTIFIER, SYM_PROCEDURE, SYM_NULL);
-				set = uniteset(statbegsys, set1);
-				test(set, fsys, 6);
-				destroyset(set1);
-				destroyset(set);*/
 			}
 			else
 			{
 				error(5); // Missing ',' or ';'.
 			}
-		} // while
-		dx = block_dx; //restore dx after handling procedure declaration! dx是参数和局部变量的总个数
+		} // if
+		dx = block_dx; //restore dx after handling procedure declaration! dx是局部变量的个数
 
 	} while (inset(sym, declbegsys));
 
@@ -1526,7 +1506,7 @@ void interpret()
 		case OPR:
 			switch (i.a) // operator
 			{
-			case OPR_RET: //put the return value in stack[b],since the SL isn't useful anymore,no need to worry that it may be covered.
+			case OPR_RET: //put the return value in stack[b-i.l],since the argument isn't useful anymore,no need to worry that it may be covered.
 				pc = stack[b+2];
 				stack[b-i.l] = stack[top];
 				//printf("ret %d from [%d] to [%d]\n",stack[top],top,b-i.l);
@@ -1570,9 +1550,6 @@ void interpret()
 					continue;
 				}
 				stack[top] /= stack[top + 1];
-				break;
-			case OPR_ODD:
-				stack[top] %= 2;
 				break;
 			case OPR_EQU:
 				top--;
@@ -1662,7 +1639,7 @@ void interpret()
 			break;
 		case EXT:                      //2017.10.25
 			pc = 0;
-			printf("Exit Program\n");
+			printf("Exit Program");
 			break;
         case PRT:
             if(i.a)
@@ -1698,7 +1675,7 @@ int main()
 
 	// create begin symbol sets
 	declbegsys = createset(SYM_CONST, SYM_VAR, SYM_PROCEDURE, SYM_NULL);
-	facbegsys = createset(SYM_IDENTIFIER, SYM_NUMBER, SYM_LPAREN, SYM_MINUS, SYM_ODD, SYM_NOT, SYM_BITNOT, SYM_NULL);
+	facbegsys = createset(SYM_IDENTIFIER, SYM_NUMBER, SYM_LPAREN, SYM_MINUS, SYM_NOT, SYM_BITNOT, SYM_NULL);
 	set = createset(SYM_BEGIN, SYM_CALL, SYM_IF, SYM_WHILE, SYM_FOR, SYM_EXIT, SYM_RET, SYM_PRINT, SYM_NULL);
 	statbegsys = uniteset(facbegsys, set);
 	destroyset(set);
