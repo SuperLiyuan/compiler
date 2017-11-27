@@ -311,11 +311,19 @@ int varoffset(int a, symset fsys)
 	int i = 0, k = 0, temp[MAXDIM]={0}, IsArray=0;
 	symset set, set1, set2;
 
-
     set = createset(SYM_RBRKET, SYM_NULL);
     set1 = uniteset(set, fsys);
 	while(sym == SYM_LBRKET)
 	{
+
+		if(table[a].dim == NULL)
+		{
+			symset set;
+            set = createset(SYM_COMMA,SYM_SEMICOLON,SYM_END,SYM_NULL);
+            test(set, facbegsys, 20); //Not an array
+            destroyset(set);
+			return IsArray; //false
+		}
 	    IsArray = 1;
 		getsym();
 		if(k>=MAXDIM)
@@ -355,6 +363,14 @@ int constoffset(int a){
 	int i = 0, k = 0, temp[MAXDIM]={0};
 	while(sym == SYM_LBRKET)
 	{
+	    if(table[a].dim == NULL)
+        {
+            symset set;
+            set = createset(SYM_COMMA,SYM_SEMICOLON,SYM_END,SYM_NULL);
+            test(set, facbegsys, 20); //Not an array
+            destroyset(set);
+            return 1;
+        }
 		getsym();
 		if(k>=MAXDIM)
         {
@@ -451,14 +467,14 @@ void enter(int kind)
 		table[tx].value = value;
 		value = NULL;
 		table[tx].dim = td;
-		td = (int*)malloc(MAXDIM*sizeof(int));
+		td = NULL;
 		break;
 	case ID_VARIABLE:
 		mk = (mask*)&table[tx];
 		mk->level = level;
 		mk->address = dx;
 		mk->dim = td;
-		td = (int*)malloc(MAXDIM*sizeof(int));
+		td = NULL;
 		break;
 	case ID_PROCEDURE:
 		mk = (mask*)&table[tx];
@@ -489,6 +505,7 @@ void constdeclaration()
 		getsym();
 		if (sym == SYM_LBRKET) //'['
 		{
+			td = (int*)malloc(MAXDIM*sizeof(int));
 			l = arraylength();
 		}
 		if (sym == SYM_EQU || sym == SYM_BECOMES)
@@ -582,14 +599,17 @@ void constdeclaration()
 int vardeclaration(void)
 {
 	int l = 1; //length
+	char id0[MAXIDLEN+1];
 	if (sym == SYM_IDENTIFIER)
 	{
+	    strcpy(id0,id);
 		getsym();
 		if (sym == SYM_LBRKET)
 		{
+			td = (int*)malloc(MAXDIM*sizeof(int));
 			l = arraylength();
 		}
-
+		strcpy(id,id0);
 		enter(ID_VARIABLE);
 		dx += l;
 	}
@@ -1684,7 +1704,7 @@ int main()
 	ch = ' ';
 	kk = MAXIDLEN;
 	*id = '\0';
-	td = (int*)malloc(MAXDIM*sizeof(int));
+	td = NULL;
 
 	getsym();
 

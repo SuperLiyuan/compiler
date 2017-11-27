@@ -113,7 +113,7 @@ const char* err_msg[] =
 /* 17 */    "';' or '}' expected.",
 /* 18 */    "Missing ']'.",
 /* 19 */    "Incorrect symbol.",
-/* 20 */    "Relative operators expected.",
+/* 20 */    "Not an array.",
 /* 21 */    "Procedure identifier can not be in an expression.",
 /* 22 */    "Missing ')'.",
 /* 23 */    "The symbol can not be followed by a factor.",

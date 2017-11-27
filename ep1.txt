@@ -1,0 +1,44 @@
+var i;
+const K = 2,A = 10,k[3][4][K]={2,3,4,K,6,7,8,9,10};
+
+procedure add(a,b)
+{
+  return a+b;
+};
+
+procedure fibo()
+var a[A];
+{
+  a[0]:=a[1]:=1;
+  print(a[0],a[1]);
+  for(i:=2;i<10;i:=i+1)
+    print(a[i]:=add(a[i-1],a[i-2]));
+};
+
+procedure factorial(n)
+{
+  if(n=1)
+    return 1;
+  else
+    return n*factorial(n-1);
+};
+
+var j;
+{
+  print(k[0][1][1]);
+  print();
+
+  fibo();
+  print();
+
+  print(factorial(k[0][K]));
+  print();
+  
+  if((j:=0) && (j:=4) && (j:=5) || (j:=1) || (j:=2))
+  {
+    print(j);
+    print();
+    exit;
+  }
+  print(9);
+}.
