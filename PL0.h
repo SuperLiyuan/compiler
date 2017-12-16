@@ -36,7 +36,7 @@ enum symtype
 	SYM_SEMICOLON,
 	SYM_PERIOD,
 	SYM_BECOMES,
-    SYM_BEGIN,
+	SYM_BEGIN,
 	SYM_END,
 	SYM_IF,
 	SYM_WHILE,
@@ -59,7 +59,11 @@ enum symtype
 	SYM_RET,
 	SYM_LBRKET,    //'['
 	SYM_RBRKET,    //']'
-	SYM_PRINT
+	SYM_PRINT,
+	SYM_RDM,
+	SYM_SWITCH,
+	SYM_COLOM,
+	SYM_CASE
 };
 
 enum idtype
@@ -79,7 +83,7 @@ enum oprcode
 	OPR_NEQ, OPR_LES, OPR_LEQ, OPR_GTR,
 	OPR_AND, OPR_OR, OPR_NOT, OPR_GEQ,
 	OPR_MOD, OPR_BitOR, OPR_BitAND, OPR_BitXOR,              //2017.10.11
-    OPR_BitNOT
+	OPR_BitNOT
 };
 
 
@@ -93,46 +97,52 @@ typedef struct
 //////////////////////////////////////////////////////////////////////
 const char* err_msg[] =
 {
-/*  0 */    "",
-/*  1 */    "Found ':=' when expecting '='.",
-/*  2 */    "There must be a number or const to follow '='.",
-/*  3 */    "There must be an '=' or dimension declaration to follow the identifier.",
-/*  4 */    "There must be an identifier to follow 'const', 'var', or 'procedure'.",
-/*  5 */    "Missing ',' or ';'.",
-/*  6 */    "Incorrect procedure name.",
-/*  7 */    "Statement expected.",
-/*  8 */    "Follow the statement is an incorrect symbol.",
-/*  9 */    "'.' expected.",
-/* 10 */    "';' expected.",
-/* 11 */    "Undeclared identifier.",
-/* 12 */    "Illegal assignment.",
-/* 13 */    "':=' expected.",
-/* 14 */    "There must be an identifier to follow the 'call'.",
-/* 15 */    "A constant or variable can not be called.",
-/* 16 */    "'(' expected.",             //2017.10.14
-/* 17 */    "';' or '}' expected.",
-/* 18 */    "Missing ']'.",
-/* 19 */    "Incorrect symbol.",
-/* 20 */    "Not an array.",
-/* 21 */    "Procedure identifier can not be in an expression.",
-/* 22 */    "Missing ')'.",
-/* 23 */    "The symbol can not be followed by a factor.",
-/* 24 */    "The symbol can not be as the beginning of an expression.",
-/* 25 */    "The number is too great.",
-/* 26 */    "Redundant ';'.",
-/* 27 */    "Unmatched 'else'.",
-/* 28 */    "Incomplete 'for' statement.",
-/* 29 */    "There must be an number or const in declaration.",
-/* 30 */    "Missing '}'.",
-/* 31 */    "Illegal dimension declaration.",
-/* 32 */    "There are too many levels.",
-/* 33 */    "Too many initializers.",
-/* 34 */    "The number of actual parameters and virtual parameters aren't matched or Missing ')'",
-/* 35 */    "There must be an number or const in dimensions of an const array in using.",
-/* 36 */    "Out of array boundary.",
-/* 37 */    "Too many dimensions.",
-/* 38 */    "'{' expected.",
-/* 39 */    "Initializers expected."
+	/*  0 */    "",
+	/*  1 */    "Found ':=' when expecting '='.",
+	/*  2 */    "There must be a number or const to follow '='.",
+	/*  3 */    "There must be an '=' or dimension declaration to follow the identifier.",
+	/*  4 */    "There must be an identifier to follow 'const', 'var', or 'procedure'.",
+	/*  5 */    "Missing ',' or ';'.",
+	/*  6 */    "Incorrect procedure name.",
+	/*  7 */    "Statement expected.",
+	/*  8 */    "Follow the statement is an incorrect symbol.",
+	/*  9 */    "'.' expected.",
+	/* 10 */    "';' expected.",
+	/* 11 */    "Undeclared identifier.",
+	/* 12 */    "Illegal assignment.",
+	/* 13 */    "':=' expected.",
+	/* 14 */    "There must be an identifier to follow the 'call'.",
+	/* 15 */    "A constant or variable can not be called.",
+	/* 16 */    "'(' expected.",             //2017.10.14
+	/* 17 */    "';' or '}' expected.",
+	/* 18 */    "Missing ']'.",
+	/* 19 */    "Incorrect symbol.",
+	/* 20 */    "Not an array.",
+	/* 21 */    "Procedure identifier can not be in an expression.",
+	/* 22 */    "Missing ')'.",
+	/* 23 */    "The symbol can not be followed by a factor.",
+	/* 24 */    "The symbol can not be as the beginning of an expression.",
+	/* 25 */    "The number is too great.",
+	/* 26 */    "Redundant ';'.",
+	/* 27 */    "Unmatched 'else'.",
+	/* 28 */    "Incomplete 'for' statement.",
+	/* 29 */    "There must be an number or const in declaration.",
+	/* 30 */    "Missing '}'.",
+	/* 31 */    "Illegal dimension declaration.",
+	/* 32 */    "There are too many levels.",
+	/* 33 */    "Too many initializers.",
+	/* 34 */    "The number of actual parameters and virtual parameters aren't matched or Missing ')'",
+	/* 35 */    "There must be an number or const in dimensions of an const array in using.",
+	/* 36 */    "Out of array boundary.",
+	/* 37 */    "Too many dimensions.",
+	/* 38 */    "'{' expected.",
+	/* 39 */    "Initializers expected.",
+	/*38*/		 "There must be an identifier to follow the 'switch'.",
+	/*39*/		"'{' expected.",
+	/*40*/		"'case' expected.",
+	/*41*/		"There must be a number to follow 'case'.",
+	/*42*/		"':' expected.",
+	/*43*/		"Expecting a condition to exit."
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -160,26 +170,26 @@ const char* word[NRW + 1] =
 	"", /* place holder */
 	"begin", "call", "const", "end", "if",
 	"procedure", "var", "while", "else", "do",
-	"exit", "for", "return", "print"
+	"exit", "for", "return", "print","random","switch","case"
 };
 
 int wsym[NRW + 1] =
 {
 	SYM_NULL, SYM_BEGIN, SYM_CALL, SYM_CONST, SYM_END,
 	SYM_IF, SYM_PROCEDURE, SYM_VAR, SYM_WHILE, SYM_ELSE, SYM_DO,
-	SYM_EXIT, SYM_FOR, SYM_RET, SYM_PRINT
+	SYM_EXIT, SYM_FOR, SYM_RET, SYM_PRINT,SYM_RDM,SYM_END,SYM_SWITCH,SYM_CASE
 };
 
 int ssym[NSYM + 1] =
 {
 	SYM_NULL, SYM_PLUS, SYM_MINUS, SYM_TIMES, SYM_SLASH,
 	SYM_LPAREN, SYM_RPAREN, SYM_EQU, SYM_COMMA, SYM_PERIOD, SYM_SEMICOLON,
-	SYM_BITXOR, SYM_MOD, SYM_BITNOT, SYM_LBRKET, SYM_RBRKET, SYM_BEGIN, SYM_END
+	SYM_BITXOR, SYM_MOD, SYM_BITNOT, SYM_LBRKET, SYM_RBRKET, SYM_BEGIN, SYM_END, SYM_COLOM
 };
 
 char csym[NSYM + 1] =
 {
-	' ', '+', '-', '*', '/', '(', ')', '=', ',', '.', ';','^','%','~','[',']','{','}'
+	' ', '+', '-', '*', '/', '(', ')', '=', ',', '.', ';','^','%','~','[',']','{','}',':'
 };
 
 #define MAXINS   14
@@ -211,7 +221,7 @@ typedef struct
 	int   *dim;    //dim of var array
 } mask;
 
-typedef struct cxnode{
+typedef struct cxnode {
 	int cx;
 	struct cxnode *next;
 }*cxlist;
