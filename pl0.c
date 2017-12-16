@@ -1333,7 +1333,7 @@ void statement(symset fsys)
 		set = uniteset(set1, fsys);
 		statement(set);
 		while (inset(sym, statbegsys) || sym == SYM_SEMICOLON)     //2017.10.25
-		{//sys�ڲ���statement��ǰ׺��,while true, there are other more statements before 'end'
+		{//sys在不在statement的前缀中,while true, there are other more statements before 'end'
 			if (sym == SYM_SEMICOLON)  //this is illegal, just for reporting error
 			{
 				error(26);   //redundant ';' which will cause "begin;"
@@ -1474,13 +1474,13 @@ void statement(symset fsys)
 	}
 	else if (sym == SYM_RET) {
 		getsym();
-		if (sym == SYM_SEMICOLON) {//return; ���0���ڱ����õ�ջ����Ȼ���ٷŵ�ԭջջ��
+		if (sym == SYM_SEMICOLON) {//return; 则把0放在被调用的栈顶，然后再放到原栈栈顶
 			gen(LIT, 0, 0);
 			gen(OPR, prodn, OPR_RET);
 			getsym();
 		}
 		else {//return 1;return 1+x;return fact(n-1);
-			top_expr(fsys);//���ú�Ľ������ջ��
+			top_expr(fsys);//调用后的结果存在栈顶
 			gen(OPR, prodn, OPR_RET);
 			if (sym != SYM_SEMICOLON)
 				error(10);// missing ';'.
@@ -1520,6 +1520,133 @@ void statement(symset fsys)
 		else
 			error(10);   //';' expected
 	}
+	else if (sym == SYM_RDM) {
+
+		getsym();
+		if (sym == SYM_LPAREN)
+			getsym();
+		else
+			error(16);   //'(' expected
+		if (sym == SYM_RPAREN) {
+			srand((unsigned)time(NULL));
+			tmp_num = rand();
+			gen(LIT, 0, tmp_num);
+			getsym();
+			if (sym == SYM_SEMICOLON)
+				getsym();
+			else
+				error(10);//';'expected
+		}
+		else if (sym == SYM_NUMBER) {
+			srand((unsigned)time(NULL));
+			tmp_num = rand() / num;
+			gen(LIT, 0, tmp_num);
+			getsym();
+			if (sym == SYM_RPAREN) {
+				getsym();
+				if (sym == SYM_SEMICOLON)
+					getsym();
+				else
+					error(10);
+			}
+			else
+				error(22);	//Missing ')'.
+		}
+
+	}
+	else if (sym == SYM_SWITCH) {
+		//switch (a) {case数字:语句;}
+		int cxiaddr = 0; //case后面数字(没办法写常量了)
+		int cxcase = 0;//执行语句的地址
+		int cxend[50];  //每个case的条件判断的地址
+		int cmp_num;
+		int next = 0;
+		for (int j = 0;j < 50;j++) cxend[j] = -1;
+		getsym();
+		set1 = createset(SYM_RPAREN, SYM_NULL);
+		set = uniteset(set1, fsys);
+
+		if (sym != SYM_LPAREN)
+			error(16);		//'（’ expected.
+
+		else {
+			getsym();
+			if (sym != SYM_IDENTIFIER)
+				error(38);	// "There must be an identifier to follow the 'switch'."
+			else {
+				mask* mk;
+				if (!(i = position(id)))
+				{
+					error(11); // Undeclared identifier.
+					getsym();
+					//test(facbegsys, fsys, 0);
+				}
+				else if (table[i].kind == ID_VARIABLE)//【待会要 gen(LOD
+				{
+					mk = (mask*)&table[i];
+					cxiaddr = mk->address;
+				}
+				getsym();
+				if (sym != SYM_RPAREN) error(22); //MISSING ')'.
+				else getsym();
+				if (sym != SYM_BEGIN) error(39); //'{' expected
+				else getsym();
+				while (sym != SYM_END) {
+
+					if (sym != SYM_CASE)  error(40);
+					else getsym();
+					if (sym != SYM_NUMBER) error(41);
+					//LIT将常数置于栈顶,LOD将变量值置于栈顶
+					gen(LIT, 0, num);
+					gen(LOD, 0, cxiaddr);
+					gen(OPR, 0, OPR_EQU);			/*如果不相等,栈顶为0 */
+					cxcase = cx;
+					gen(JPC, 0, 0);
+					getsym();
+					if (sym != SYM_COLOM) error(42); //缺少" :" 
+					else {
+						statement(fsys);						
+						cxend[next++] = cx;
+						gen(JMP, 0, 0);
+						code[cxcase].a = cx;
+						if (sym == SYM_SEMICOLON) getsym();
+					}
+				}
+			}
+			for (int i = 0; i < 50 && cxend[i] != -1; i++) {
+				code[cxend[i]].a = cx;
+			}
+			getsym();
+		}
+	}
+	else if (sym == SYM_DO) {
+		cx1=cx;
+		getsym();
+		if (sym != SYM_BEGIN) error(39);//'{'expected.
+		getsym();
+		set1 = createset(SYM_END, SYM_SEMICOLON, SYM_NULL);
+		set = uniteset(set1, fsys);
+		statement(set);
+		while (inset(sym, statbegsys) || sym == SYM_SEMICOLON)     //把begin照抄下来了……
+		{//sys在不在statement的前缀中,while true, there are other more statements before 'end',
+			statement(set);
+		} // while
+		destroyset(set1);
+		destroyset(set);
+		if (sym == SYM_END)
+		{
+			getsym();
+			if (sym != SYM_WHILE)	error(43);// condition expected
+			else getsym();
+			if (sym != SYM_LPAREN)		error(16);//'(' expected
+			getsym();
+			set1 = creatset(SYM_RPAREN, SYM_NULL);
+			set = uniteset(set1, fsys);
+			else top_expr(set);
+			gen(JPC, 0, 0);
+		}
+	}
+	
 	test(fsys, phi, 19);
 } // statement
 
