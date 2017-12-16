@@ -309,7 +309,7 @@ int arraylength()
 	{
 		i = td[k];
 		td[k] = sum;
-		printf("td[%d] = %d\n", k, sum);
+		//printf("td[%d] = %d\n", k, sum);
 		sum *= i;
 	}
 	return sum;   // >0 means all dimensions specified, <0 means "a[] = xxx"
@@ -318,7 +318,7 @@ int arraylength()
  //////////////////////////////////////////////////////////////////////
 int initialize(int ID_type, int arrayLevel, int n) {  // n = boundary of current dimension
 	int initer = 0, i;
-	printf("arrayLevel = %d\n", arrayLevel);
+	//printf("arrayLevel = %d\n", arrayLevel);
 	if (td[arrayLevel]) {
 		if (sym == SYM_BEGIN) { //'{'
 			getsym();
@@ -401,7 +401,7 @@ int initialize(int ID_type, int arrayLevel, int n) {  // n = boundary of current
 		else {
 			symset set, set1;
 			set = createset(SYM_COMMA, SYM_NULL);
-			set1 = createset(SYM_NULL);
+			set1 = createset(SYM_END, SYM_NULL);
 			test(set, set1, 29);    //There must be an number or const in declaration
 			destroyset(set);
 			destroyset(set1);
@@ -687,7 +687,7 @@ void constdeclaration()
 } // constdeclaration
 
   //////////////////////////////////////////////////////////////////////
-int vardeclaration(void)
+int vardeclaration()
 {
 	int i, l = 1; //length
 	char id0[MAXIDLEN + 1];
@@ -1288,7 +1288,7 @@ void statement(symset fsys)
 	}
 	else if (sym == SYM_BEGIN)
 	{ //chunk, compound_statement
-		saveTx = tx;
+		savedTx = tx;
 		getsym();
 		while (sym == SYM_VAR || sym == SYM_CONST) {
 			if (sym == SYM_CONST)
@@ -1345,7 +1345,7 @@ void statement(symset fsys)
 		destroyset(set);
 		if (sym == SYM_END)
 		{
-			tx = saveTx;
+			tx = savedTx;
 			getsym();
 		}
 		else
@@ -1675,7 +1675,7 @@ void block(symset fsys)
 	code[mk->address].a = cx - (mk->address);
 	mk->address = cx;
 	cx0 = cx;//why save
-	printf("befor statement dx = %d\n", dx);
+	//printf("befor statement dx = %d\n", dx);
 	gen(INT, 0, dx);
 	for (i = 0;i<cx1;i++) {
 		code[cx++] = temp[i];
