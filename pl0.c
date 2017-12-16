@@ -12,6 +12,7 @@
 #include "set.c"
 
 void top_expr(symset);
+int dx;  // data allocation index
 //////////////////////////////////////////////////////////////////////
 // print error message.
 void error(int n)
@@ -245,14 +246,14 @@ int arraylength()
             break;
         }
 
-		if(sym == SYM_NUMBER || sym == SYM_IDENTIFIER){
-			if(sym == SYM_IDENTIFIER)
-			{
+		if(sym == SYM_IDENTIFIER || sym == SYM_NUMBER)
+		{
+			if(sym == SYM_IDENTIFIER){
 				if ((i = position(id)) == 0)
-			    {
-				    error(11); // Undeclared identifier.
-			    }
-		    	else if(table[i].kind == ID_CONSTANT)
+				{
+					error(11); // Undeclared identifier.
+				}
+				else if(table[i].kind == ID_CONSTANT)
 				{
 					num = constvalue(i);
 				}
@@ -271,7 +272,6 @@ int arraylength()
 					continue;
 				}
 			}
-
 			td[k++] = num;
 
 			getsym();
@@ -282,6 +282,16 @@ int arraylength()
 			else
 			{
 				error(22); //Missing ')' or ']'
+			}
+		}
+		else if(sym == SYM_RBRKET){
+			if(k==0){
+				td[k++] = -1;
+				getsym();
+			}
+			else{
+				error(31);  //Illegal dimension declaration
+				getsym();
 			}
 		}
 		else
@@ -299,11 +309,106 @@ int arraylength()
     {
         i = td[k];
         td[k] = sum;
-        //printf("td[%d] = %d\n",k,sum);
+        printf("td[%d] = %d\n",k,sum);
         sum *= i;
     }
-	return sum;
+	return sum;   // >0 means all dimensions specified, <0 means "a[] = xxx"
 }//arraylength
+
+//////////////////////////////////////////////////////////////////////
+int initialize(int ID_type, int arrayLevel, int n){  // n = boundary of current dimension
+	int initer = 0, i;
+	printf("arrayLevel = %d\n",arrayLevel);
+	if(td[arrayLevel]){
+		if(sym == SYM_BEGIN){ //'{'
+			getsym();
+			while(sym != SYM_END){  
+				if(td[arrayLevel+1])
+					i = td[arrayLevel]/td[arrayLevel+1];
+				else
+					i = 1;
+				initialize(ID_type, arrayLevel+1, i);
+				initer++;
+				if(sym == SYM_COMMA){
+					getsym();
+				}
+			}
+			if(n == -1)
+				n = initer;
+			if(initer > n){
+				error(33);   // too many initializers
+			}
+			else if(initer < n){
+				// fill by 0
+				if(ID_type == ID_CONSTANT){
+					vx += (n-initer)*td[arrayLevel];
+				}
+				else{ // ID_VARIABLE
+					initer = (n-initer)*td[arrayLevel];
+					gen(LIT, 0, 0);
+					while(initer--){
+						gen(STO, 0, dx++);
+					}
+					gen(POP, 0, 0);
+				}
+			}
+			if(sym == SYM_END){ //'}'
+				getsym();
+			}
+			else{
+				error(30);  //missing '}'
+			}
+		}
+		else{
+			error(38); //'{' expected
+		}
+	}
+	else{
+		if(sym == SYM_NUMBER || sym == SYM_IDENTIFIER){
+			if(sym == SYM_IDENTIFIER)
+			{
+				if ((i = position(id)) == 0)
+				{
+					error(11); // Undeclared identifier.
+				}
+				else {
+					getsym();
+					if(table[i].kind == ID_CONSTANT)
+					{
+						num = constvalue(i);
+					}
+					else
+					{
+						error(2); // There must be a number or const to follow '='
+					}
+				}
+			}
+			else{ //number
+				getsym();;
+			}
+			if(ID_type == ID_CONSTANT){
+				value[vx++] = num;
+			}
+			else{ //ID_type == ID_VARIABLE
+				gen(LIT, 0, num);
+				gen(STO, 0, dx++);
+				gen(POP, 0, 0);
+			}
+		}
+		else if(sym == SYM_END){
+			// {} means initial by 0
+		}
+		else{
+			symset set, set1;
+			set = createset(SYM_COMMA, SYM_NULL);
+			set1 = createset(SYM_NULL);
+			test(set, set1, 29);    //There must be an number or const in declaration
+			destroyset(set);
+			destroyset(set1);
+		}
+	}
+	return initer;
+}
 
 //////////////////////////////////////////////////////////////////////
 int varoffset(int a, symset fsys)
@@ -439,18 +544,18 @@ int constoffset(int a){
 		sum += temp[k]*table[a].dim[k];
 		//printf("temp[%d]=%d, dim[%d]=%d\n",k,temp[k],k,table[a].dim[k]);
 	}
-	//printf("quit offset with sym == %d\n", sym);
+	//printf("quit offset with sum = %d, sym = %d\n", sum, sym);
 	return sum;
 }//constoffset
 
 //////////////////////////////////////////////////////////////////////
 int constvalue(int a)
 {//find and return the value of const
+    //printf("constvalue %s\n",table[a].name);
 	return table[a].value[constoffset(a)];
 }//constvalue
 
 //////////////////////////////////////////////////////////////////////
-int dx;  // data allocation index
 
 // enter object(constant, variable or procedre) into table.
 void enter(int kind)
@@ -497,7 +602,7 @@ int position(char* id)
 //////////////////////////////////////////////////////////////////////
 void constdeclaration()
 {
-	int l = 1, k = 0;
+	int l = 1, k = 0, i;
 	char id0[MAXIDLEN+1];
 	if (sym == SYM_IDENTIFIER)
 	{
@@ -506,85 +611,71 @@ void constdeclaration()
 		if (sym == SYM_LBRKET) //'['
 		{
 			td = (int*)malloc(MAXDIM*sizeof(int));
+			memset(td, 0, MAXDIM*sizeof(int));
 			l = arraylength();
+			if(l<0){
+				error(31);     //Illegal dimension declaration.
+				l *= -20;
+			}
+			value = (int*)malloc(l*sizeof(int));
+			memset(value, 0, l*sizeof(int));
+			vx = 0;
+			if (sym == SYM_EQU || sym == SYM_BECOMES)
+			{
+				if (sym == SYM_BECOMES)
+					error(1); // Found ':=' when expecting '='.
+				getsym();
+
+				printf("dx = %d, l = %d\n",dx, l);
+				initialize(ID_CONSTANT, 0, l/td[0]);
+				strcpy(id,id0);
+				enter(ID_CONSTANT);
+			}
+			else{
+				error(3);  //There must be an '=' to follow the identifier.
+				free(value);
+				free(td);
+			}
 		}
-		if (sym == SYM_EQU || sym == SYM_BECOMES)
+		else if (sym == SYM_EQU || sym == SYM_BECOMES)
 		{
 			if (sym == SYM_BECOMES)
 				error(1); // Found ':=' when expecting '='.
 			getsym();
-			if (sym == SYM_BEGIN) //'{'
+
+			if(sym == SYM_NUMBER || sym == SYM_IDENTIFIER)
 			{
-				getsym();
-				value = (int*)malloc(l*sizeof(int));
-				int i = 0;
-				while(sym == SYM_NUMBER || sym == SYM_IDENTIFIER){
-					if (sym == SYM_NUMBER || sym == SYM_IDENTIFIER)
+				if(sym == SYM_IDENTIFIER)
+				{
+					if ((i = position(id)) == 0)
 					{
-						if(!(l--))
-						{
-							error(33);  //too many initializers
-							getsym();
-							symset set1,set;
-							set1 = createset(SYM_END, SYM_COMMA, SYM_NULL);
-							set = createset(SYM_VAR, SYM_PROCEDURE, SYM_IDENTIFIER, SYM_BEGIN, SYM_NULL);
-							test(set1, set, 0);
-							destroyset(set);
-							destroyset(set1);
-							break;
-						}
-						if(sym == SYM_IDENTIFIER)
-						{
-							if ((i = position(id)) == 0)
-							{
-								error(11); // Undeclared identifier.
-							}
-							else if(table[i].kind == ID_CONSTANT)
-							{
-								num = constvalue(i);
-							}
-							else
-							{
-								error(29); //There must be an number or const in declaration
-								getsym();
-								continue;
-							}
-						}
-						value[k++] = num;
+						error(11); // Undeclared identifier.
+					}
+					else {
 						getsym();
+						if(table[i].kind == ID_CONSTANT)
+						{
+							num = constvalue(i);
+						}
+						else
+						{
+							error(2); // There must be a number or const to follow '='
+						}
 					}
-					else
-					{
-						error(2); // There must be a number or const to follow '='.
-					}
-					if(sym == SYM_COMMA)
-                        getsym();
 				}
-				while(l--) //fill the rest of array by 0
-				{
-					value[k++] = 0;
-				}
-				if(sym == SYM_END) //'}'
-				{
+				else{
 					getsym();
 				}
-				else
-				{
-					error(30);  //missing '}'
-				}
-			}
-			else if(sym == SYM_NUMBER)
-			{
 				value = (int*)malloc(sizeof(int));
 				*value = num;
-				getsym();
+				strcpy(id,id0);
+				enter(ID_CONSTANT);
+				//printf("enter id = %s, value = %d\n",id,num);
 			}
 			else
 			{
-				error(2); // There must be a number to follow '='.
+				error(2); // There must be a number or const to follow '='.
 			}
-			strcpy(id,id0);
-			enter(ID_CONSTANT);
 		}
 		else
 		{
@@ -598,20 +689,81 @@ void constdeclaration()
 //////////////////////////////////////////////////////////////////////
 int vardeclaration(void)
 {
-	int l = 1; //length
+	int i, l = 1; //length
 	char id0[MAXIDLEN+1];
 	if (sym == SYM_IDENTIFIER)
 	{
 	    strcpy(id0,id);
 		getsym();
 		if (sym == SYM_LBRKET)
-		{
+		{   //// var array
 			td = (int*)malloc(MAXDIM*sizeof(int));
+			memset(td, 0, MAXDIM*sizeof(int));
 			l = arraylength();
+			if(l>0){
+				if(sym == SYM_EQU){
+					getsym();
+					printf("dx = %d, l = %d\n",dx, l);
+					initialize(ID_VARIABLE, 0, l/td[0]);
+					printf("dx' = %d\n",dx);
+					dx -= l;
+				}
+			}
+			else{ // "a[] = xxx"
+				if(sym == SYM_EQU){
+					getsym();
+					printf("dx = %d, l = %d\n",dx, l);
+					l = initialize(ID_VARIABLE, 0, -1)*td[0];
+					printf("dx' = %d\n",dx);
+					dx -= l;
+				}
+				else{
+					error(39);  //Initializers expected.
+					l *= -20;
+				}
+			}
+			strcpy(id,id0);
+			enter(ID_VARIABLE);
+			dx += l;
 		}
-		strcpy(id,id0);
-		enter(ID_VARIABLE);
-		dx += l;
+		else{  //single var
+			enter(ID_VARIABLE);
+			if(sym == SYM_EQU || sym == SYM_BECOMES){
+				if(sym == SYM_BECOMES)
+					error(1);  //Found ':=' when expecting '='.
+				getsym();
+				if(sym == SYM_NUMBER || sym == SYM_IDENTIFIER){
+					if(sym == SYM_IDENTIFIER)
+					{
+						if ((i = position(id)) == 0)
+						{
+							error(11); // Undeclared identifier.
+						}
+						else {
+							getsym();
+							if(table[i].kind == ID_CONSTANT)
+							{
+								num = constvalue(i);
+							}
+							else
+							{
+								error(2); // There must be a number or const to follow '='
+							}
+						}
+					}
+					else{ //number
+						getsym();
+					}
+					gen(LIT, 0, num);
+					gen(STO, 0, dx);
+					gen(POP, 0, 0);
+				}
+				else{
+					error(2); // There must be a number or const to follow '='
+				}
+			}
+			dx++;
+		}
 	}
 	else
 	{
@@ -1070,7 +1222,7 @@ void statement(symset fsys)
 {
     //printf("enter statement\n");
 	int i, cx1, cx2, cx3;
-	int temp,tmpnum;
+	int temp,tmpnum,savedTx;
 	symset set1, set;
 
 	if (inset(sym, facbegsys))        //2017.10.26
@@ -1135,8 +1287,48 @@ void statement(symset fsys)
 		getsym();
 	}
 	else if (sym == SYM_BEGIN)
-	{ //chunk
+	{ //chunk, compound_statement
+		saveTx = tx;
 		getsym();
+		while (sym == SYM_VAR || sym == SYM_CONST){
+			if (sym == SYM_CONST)
+			{ // constant declarations
+				getsym();
+				
+				constdeclaration();
+				while (sym == SYM_COMMA)
+				{
+					getsym();
+					constdeclaration();
+				}
+				if (sym == SYM_SEMICOLON)
+				{
+					getsym();
+				}
+				else
+				{
+					error(5); // Missing ',' or ';'.
+				}
+			} // if
+			else
+			{  // var declaration
+				getsym();
+				vardeclaration();
+				while (sym == SYM_COMMA)
+				{
+					getsym();
+					vardeclaration();
+				}
+				if (sym == SYM_SEMICOLON)
+				{
+					getsym();
+				}
+				else
+				{
+					error(5); // Missing ',' or ';'.
+				}
+			}
+		}
 		set1 = createset(SYM_SEMICOLON, SYM_END, SYM_NULL);
 		set = uniteset(set1, fsys);
 		statement(set);
@@ -1153,6 +1345,7 @@ void statement(symset fsys)
 		destroyset(set);
 		if (sym == SYM_END)
 		{
+			tx = saveTx;
 			getsym();
 		}
 		else
@@ -1333,11 +1526,12 @@ void statement(symset fsys)
 //////////////////////////////////////////////////////////////////////
 void block(symset fsys)
 {
-	int cx0; // initial code index
+	int i,cx0,cx1 = 0; // initial code index
 	mask* mk;
 	int block_dx;
 	int savedTx;
 	symset set1, set;
+	instruction temp[CXMAX];
 
 	mk = (mask*)&table[tx-prodn];  //a critical bug appeared here
 	mk->address = cx;
@@ -1376,6 +1570,7 @@ void block(symset fsys)
 
 		if (sym == SYM_VAR)
 		{ // variable declarations
+			cx0 = cx;  //store cx before var initialization
 			getsym();
 			do
 			{
@@ -1394,9 +1589,14 @@ void block(symset fsys)
 					error(5); // Missing ',' or ';'.
 				}
 			} while (sym == SYM_IDENTIFIER);
+			for(i = cx0;i<cx;i++){
+				//store codes for var initialization
+				temp[cx1++] = code[i];
+			}
+			cx = cx0;
 		} // if
-		block_dx = dx; //save dx before handling procedure call!
 
+		block_dx = dx; //save dx before handling procedure call!
 		if( sym == SYM_PROCEDURE )
 		{
 			int k;
@@ -1475,13 +1675,20 @@ void block(symset fsys)
 	code[mk->address].a = cx-(mk->address);
 	mk->address = cx;
 	cx0 = cx;//why save
+	printf("befor statement dx = %d\n",dx);
 	gen(INT, 0, dx);
+	for(i=0;i<cx1;i++){
+		code[cx++] = temp[i];
+	}
+
 	set1 = createset(SYM_SEMICOLON, SYM_END, SYM_NULL);
 	set = uniteset(set1, fsys);
 	prodn = mk->prodn;
 	statement(set);
 	destroyset(set1);
 	destroyset(set);
+
+	code[cx0].a = dx;
 	gen(LIT, 0, 0);
 	gen(OPR, prodn, OPR_RET);
 	test(fsys, phi, 8); // test for error: Follow the statement is an incorrect symbol.
@@ -1700,7 +1907,7 @@ int main()
 	statbegsys = uniteset(facbegsys, set);
 	destroyset(set);
 
-	err = cc = cx = ll = factflag = num = 0; // initialize global variables
+	err = cc = cx = vx = ll = factflag = num = 0; // initialize global variables
 	ch = ' ';
 	kk = MAXIDLEN;
 	*id = '\0';

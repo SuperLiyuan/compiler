@@ -124,13 +124,15 @@ const char* err_msg[] =
 /* 28 */    "Incomplete 'for' statement.",
 /* 29 */    "There must be an number or const in declaration.",
 /* 30 */    "Missing '}'.",
-/* 31 */    "Incomplete program.",
+/* 31 */    "Illegal dimension declaration.",
 /* 32 */    "There are too many levels.",
 /* 33 */    "Too many initializers.",
 /* 34 */    "The number of actual parameters and virtual parameters aren't matched or Missing ')'",
-/* 35 */    "There must be an number or const in dimensions of an array in using.",
+/* 35 */    "There must be an number or const in dimensions of an const array in using.",
 /* 36 */    "Out of array boundary.",
-/* 37 */    "Too many dimensions."
+/* 37 */    "Too many dimensions.",
+/* 38 */    "'{' expected.",
+/* 39 */    "Initializers expected."
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -143,6 +145,7 @@ int  ll;         // line length
 int  kk;
 int  err;
 int  cx;         // index of current instruction to be generated.
+int  vx;         // for const value initialization
 int  level = 0;
 int  tx = 0;
 int  Flag = 0;
