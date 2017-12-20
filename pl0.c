@@ -1556,7 +1556,7 @@ void statement(symset fsys)
 	}
 	else if (sym == SYM_SWITCH) {
 		//switch (a) {case数字:语句;}
-		int cxiaddr = 0; //case后面数字(没办法写常量了)
+		int cxiaddr = 0; //case后面数字(常量不行)
 		int cxcase = 0;//执行语句的地址
 		int cxend[50];  //每个case的条件判断的地址
 		int cmp_num;
@@ -1565,10 +1565,7 @@ void statement(symset fsys)
 		getsym();
 		set1 = createset(SYM_RPAREN, SYM_NULL);
 		set = uniteset(set1, fsys);
-
-		if (sym != SYM_LPAREN)
-			error(16);		//'（’ expected.
-
+		if (sym != SYM_LPAREN) error(16);		//'（’ expected.
 		else {
 			getsym();
 			if (sym != SYM_IDENTIFIER)
