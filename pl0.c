@@ -1545,79 +1545,83 @@ void statement(symset fsys)
 			error(10);   //';' expected
 	}
 	else if (sym == SYM_SWITCH) {
-<<<<<<< HEAD
-		//switch (a) {case鏁板瓧:璇彞;}
-		int cxiaddr = 0; //case鍚庨潰鏁板瓧(甯搁噺涓嶈)
-		int cxcase = 0;//鎵ц璇彞鐨勫湴鍧�
-		int cxend[50];  //姣忎釜case鐨勬潯浠跺垽鏂殑鍦板潃
-=======
-		//switch (a) {case数字:语句;}
-		int cxiaddr = 0; //case后面数字(没办法写常量了)
+
+		//switch (a) {case 1:return;}
+		int case_num = 0;  
+		instruction tmp_stk[500], nul;
+		for (int i = 0;i < 500;i++) tmp_stk[i] = { 0,0,0 };
+		nul = { 0,0,0 };
+		int gen_cx;
+		int stmt_cx;
+		int cx1, cx2;
+		int tmp_cnt;
+		int cxiaddr = 0; 
 		int cxcase = 0;//执行语句的地址
-		int cxend[50];  //每个case的条件判断的地址
->>>>>>> f58ea94f145f49885600227ea8cb85065cdda637
-		int cmp_num;
+		int cmp_num=0;
 		int next = 0;
 		int i, j;
-		for (j = 0;j < 50;j++) cxend[j] = -1;
+		int save_addr;
+		int tmp_cx=cx;
+		/* switch(a) { tmp_cx
+			case 1:		code[cx]
+			{tmp_stk[cx1]};
+			case 2:		code[cx]
+			{tmp_stk[cx1]};
+			}
+		*/
+
 		getsym();
+
 		set1 = createset(SYM_RPAREN, SYM_NULL);
 		set = uniteset(set1, fsys);
-<<<<<<< HEAD
-		if (sym != SYM_LPAREN) error(16);		//'锛堚�?expected.
-=======
 
 		if (sym != SYM_LPAREN)
 			error(16);		//'（’ expected.
 
->>>>>>> f58ea94f145f49885600227ea8cb85065cdda637
 		else {
-			getsym();
-			if (sym != SYM_IDENTIFIER)
-				error(44);	// "There must be an identifier to follow the 'switch'."
-			else {
-				mask* mk;
-				if (!(i = position(id)))
-				{
-					error(11); // Undeclared identifier.
-					getsym();
-					//test(facbegsys, fsys, 0);
-				}
-				else if (table[i].kind == ID_VARIABLE)//【待会要 gen(LOD
-				{
-					mk = (mask*)&table[i];
-					cxiaddr = mk->address;
-				}
-				getsym();
+				top_expr(set);
 				if (sym != SYM_RPAREN) error(22); //MISSING ')'.
 				else getsym();
 				if (sym != SYM_BEGIN) error(38); //'{' expected
 				else getsym();
 				while (sym != SYM_END) {
-
+					
 					if (sym != SYM_CASE)  error(40);
 					else getsym();
+					case_num++;
 					if (sym != SYM_NUMBER) error(41);
 					//LIT将常数置于栈顶,LOD将变量值置于栈顶
+					gen(CPY, 0, 0);
 					gen(LIT, 0, num);
-					gen(LOD, 0, cxiaddr);
-					gen(OPR, 0, OPR_EQU);			/*如果不相等,栈顶为0 */
-					cxcase = cx;
-					gen(JPC, 0, 0);
+					gen(OPR, 0, OPR_EQU);			/*如果不相等,为0 */
+					gen(JPC, 0, 1);
 					getsym();
 					if (sym != SYM_COLOM) error(42); //缺少" :"
-					else {
+					else {							//先不在code[]中存放stmt的指令，而是存到tmp_stk[]中
+						cx1 = cx;					//最后再一起移回code[]
 						statement(fsys);
-						cxend[next++] = cx;
-						gen(JMP, 0, 0);
-						code[cxcase].a = cx;
+						cx2 = cx;
 						if (sym == SYM_SEMICOLON) getsym();
+						for (i = cx1;i < cx2;i++) {
+							tmp_stk[i] = code[i];
+							code[i] = nul;
+							cx--;
+						}
 					}
 				}
+				for (int i = tmp_cx;i < 4*case_num + tmp_cx;i++) {
+					if (code[i].a == JPC) {
+						int tmp =  4* (case_num + tmp_cx - i-1);
+						code[i].l = code[i].l + tmp;
+					}
+
+				}
 			}
-			for (i = 0; i < 50 && cxend[i] != -1; i++) {
-				code[cxend[i]].a = cx;
-			}
+		for (i = 0;tmp_stk[i] == {0,0,0};i++);
+		for (;tmp_stk[i] != 0;i++) {
+			code[cx] = tmp_stk[i];
+			cx++;
+		}
 			getsym();
 		}
 	}
@@ -2027,6 +2031,10 @@ void interpret()
 				stack[top] = rand() % i.a;
 			else
 				stack[top] = rand();
+			top++;
+			break;
+		case CPY://copy the value of stack[top]
+			stack[top+] = stack[top];
 			top++;
 			break;
 		} // switch

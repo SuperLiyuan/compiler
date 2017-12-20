@@ -73,7 +73,7 @@ enum idtype
 
 enum opcode
 {
-	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC, EXT, POP, DIP, LDA, STA, PRT
+	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC, EXT, POP, DIP, LDA, STA, PRT,RDM
 };
 
 enum oprcode
