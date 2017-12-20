@@ -841,15 +841,12 @@ void factor(symset fsys)
 				else
 					error(16);   //'(' expected
 				if (sym == SYM_RPAREN) {
-					srand((unsigned)time(NULL));
-					tmp_num = rand();
-					gen(LIT, 0, tmp_num);
+					gen(RDM, 0, 0);
 					getsym();
 				}
 				else if (sym == SYM_NUMBER) {
-					srand((unsigned)time(NULL));
-					tmp_num = rand() / num;
-					gen(LIT, 0, tmp_num);
+					tmp_num = num;
+					gen(RDM, 0, tmp_num);
 					getsym();
 					if (sym == SYM_RPAREN) {
 						getsym();
@@ -1567,7 +1564,7 @@ void statement(symset fsys)
 		set1 = createset(SYM_RPAREN, SYM_NULL);
 		set = uniteset(set1, fsys);
 <<<<<<< HEAD
-		if (sym != SYM_LPAREN) error(16);		//'（’ expected.
+		if (sym != SYM_LPAREN) error(16);		//'（�?expected.
 =======
 
 		if (sym != SYM_LPAREN)
@@ -2023,6 +2020,14 @@ void interpret()
 				printf("%d  ", stack[top--]);
 			else
 				printf("\n");
+			break;
+		case RDM:
+			srand((unsigned)time(NULL));
+			if (i.a)
+				stack[top] = rand() % i.a;
+			else
+				stack[top] = rand();
+			top++;
 			break;
 		} // switch
 		  //printf("pc = %d, top = %d\n",pc,top);
