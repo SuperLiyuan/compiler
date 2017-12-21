@@ -555,8 +555,8 @@ int constvalue(int a)
 	return table[a].value[constoffset(a)];
 }//constvalue
 
-//////////////////////////////////////////////////////////////////////
-// enter object(constant, variable or procedre) into table.
+ //////////////////////////////////////////////////////////////////////
+ // enter object(constant, variable or procedre) into table.
 void enter(int kind)
 {
 	mask* mk;
@@ -834,7 +834,7 @@ void factor(symset fsys)
 				getsym();
 			}
 			else if (sym == SYM_RDM) {
-                int tmp_num;
+				int tmp_num;
 				getsym();
 				if (sym == SYM_LPAREN)
 					getsym();
@@ -1312,7 +1312,7 @@ void statement(symset fsys)
 	{ //chunk, compound_statement
 		savedTx = tx;
 		getsym();
-        //printf("enter begin\n");
+		//printf("enter begin\n");
 		while (sym == SYM_VAR || sym == SYM_CONST) {
 			if (sym == SYM_CONST)
 			{ // constant declarations
@@ -1370,7 +1370,7 @@ void statement(symset fsys)
 		{
 			tx = savedTx;
 			getsym();
-            //printf("quit begin\n");
+			//printf("quit begin\n");
 		}
 		else
 		{
@@ -1547,31 +1547,28 @@ void statement(symset fsys)
 	else if (sym == SYM_SWITCH) {
 
 		//switch (a) {case 1:return;}
-		int case_num = 0;  
+		int case_num = 0;
 		instruction tmp_stk[500], nul;
-		for (int i = 0;i < 500;i++) tmp_stk[i] = { 0,0,0 };
-		nul = { 0,0,0 };
+		for (int i = 0;i < 500;i++) {
+			tmp_stk[i].l = 0;
+			tmp_stk[i].a = 0;
+			tmp_stk[i].f = 0;
+		}
+		nul.l = 0;
+		nul.f = 0;
+		nul.a=0;
 		int gen_cx;
 		int stmt_cx;
 		int cx1, cx2;
 		int tmp_cnt;
-		int cxiaddr = 0; 
+		int cxiaddr = 0;
 		int cxcase = 0;//执行语句的地址
-		int cmp_num=0;
+		int cmp_num = 0;
 		int next = 0;
 		int i, j;
 		int save_addr;
-		int tmp_cx=cx;
-		/* switch(a) { tmp_cx
-			case 1:		code[cx]
-			{tmp_stk[cx1]};
-			case 2:		code[cx]
-			{tmp_stk[cx1]};
-			}
-		*/
-
+		int tmp_cx = cx;
 		getsym();
-
 		set1 = createset(SYM_RPAREN, SYM_NULL);
 		set = uniteset(set1, fsys);
 
@@ -1579,54 +1576,54 @@ void statement(symset fsys)
 			error(16);		//'（’ expected.
 
 		else {
-				top_expr(set);
-				if (sym != SYM_RPAREN) error(22); //MISSING ')'.
+			top_expr(set);
+			if (sym != SYM_RPAREN) error(22); //MISSING ')'.
+			else getsym();
+			if (sym != SYM_BEGIN) error(38); //'{' expected
+			else getsym();
+			while (sym != SYM_END) {
+				if (sym != SYM_CASE)  error(40);
 				else getsym();
-				if (sym != SYM_BEGIN) error(38); //'{' expected
-				else getsym();
-				while (sym != SYM_END) {
-					
-					if (sym != SYM_CASE)  error(40);
-					else getsym();
-					case_num++;
-					if (sym != SYM_NUMBER) error(41);
-					//LIT将常数置于栈顶,LOD将变量值置于栈顶
-					gen(CPY, 0, 0);
-					gen(LIT, 0, num);
-					gen(OPR, 0, OPR_EQU);			/*如果不相等,为0 */
-					gen(JPC, 0, 1);
-					getsym();
-					if (sym != SYM_COLOM) error(42); //缺少" :"
-					else {							//先不在code[]中存放stmt的指令，而是存到tmp_stk[]中
-						cx1 = cx;					//最后再一起移回code[]
-						statement(fsys);
-						cx2 = cx;
-						if (sym == SYM_SEMICOLON) getsym();
-						for (i = cx1;i < cx2;i++) {
-							tmp_stk[i] = code[i];
-							code[i] = nul;
-							cx--;
-						}
+				case_num++;
+				if (sym != SYM_NUMBER) error(41);
+				//LIT将常数置于栈顶,LOD将变量值置于栈顶
+				gen(CPY, 0, 0);
+				gen(LIT, 0, num);
+				gen(OPR, 0, OPR_EQU);			/*如果不相等,为0 */
+				gen(JPC, 0, 1);
+				getsym();
+				if (sym != SYM_COLOM) error(42); //缺少" :"
+				else {							//先不在code[]中存放stmt的指令，而是存到tmp_stk[]中
+					cx1 = cx;					//最后再一起移回code[]
+					statement(fsys);
+					cx2 = cx;
+					if (sym == SYM_SEMICOLON) getsym();
+					for (i = cx1;i < cx2;i++) {
+						tmp_stk[i] = code[i];
+						code[i] = nul;
+						cx--;
 					}
-				}
-				for (int i = tmp_cx;i < 4*case_num + tmp_cx;i++) {
-					if (code[i].a == JPC) {
-						int tmp =  4* (case_num + tmp_cx - i-1);
-						code[i].l = code[i].l + tmp;
-					}
-
 				}
 			}
-		for (i = 0;tmp_stk[i] == {0,0,0};i++);
-		for (;tmp_stk[i] != 0;i++) {
+		}
+		for (int i = tmp_cx;i < 4 * case_num + tmp_cx;i++) {
+				if (code[i].a == JPC) {
+					int tmp = 4 * (case_num + tmp_cx - i - 1);
+					code[i].l = code[i].l + tmp;
+				}
+
+			}
+		for (i = 0;tmp_stk[i].f==0;i++);
+		for (;tmp_stk[i].f!= 0;i++) {
 			code[cx] = tmp_stk[i];
 			cx++;
 		}
-			getsym();
-		}
+		getsym();
+		destroyset(set);
+		destroyset(set1);
 	}
 	else if (sym == SYM_DO) {
-		cx1=cx;
+		cx1 = cx;
 		getsym();
 		if (sym != SYM_BEGIN) error(38);//'{'expected.
 		getsym();
@@ -1644,28 +1641,28 @@ void statement(symset fsys)
 			getsym();
 			if (sym != SYM_WHILE)	error(43);// condition expected
 			else {
-                getsym();
-			    if (sym != SYM_LPAREN)		error(16);//'(' expected
-                else{
-                    getsym();
-                }
-                set1 = createset(SYM_RPAREN, SYM_NULL);
-                set = uniteset(set1, fsys);
-                top_expr(set);
-                gen(OPR, 0, OPR_NOT);
-                gen(JPC, 0, cx1-cx);
-                if (sym == SYM_RPAREN){
-                    getsym();
-                }
-                else{
-                    error(22); //Missing ')'.
-                }
-                if(sym == SYM_SEMICOLON){
-                    getsym();
-                }
-                else{
-                    error(10);
-                }
+				getsym();
+				if (sym != SYM_LPAREN)		error(16);//'(' expected
+				else {
+					getsym();
+				}
+				set1 = createset(SYM_RPAREN, SYM_NULL);
+				set = uniteset(set1, fsys);
+				top_expr(set);
+				gen(OPR, 0, OPR_NOT);
+				gen(JPC, 0, cx1 - cx);
+				if (sym == SYM_RPAREN) {
+					getsym();
+				}
+				else {
+					error(22); //Missing ')'.
+				}
+				if (sym == SYM_SEMICOLON) {
+					getsym();
+				}
+				else {
+					error(10);
+				}
 			}
 		}
 	}
@@ -1826,7 +1823,7 @@ void block(symset fsys)
 	code[mk->address].a = cx - (mk->address);
 	mk->address = cx;
 	cx0 = cx;//why save
-	//printf("befor statement dx = %d\n", dx);
+			 //printf("befor statement dx = %d\n", dx);
 	gen(INT, 0, dx);
 	for (i = 0;i<cx1;i++) {
 		code[cx++] = temp[i];
@@ -2034,7 +2031,7 @@ void interpret()
 			top++;
 			break;
 		case CPY://copy the value of stack[top]
-			stack[top+] = stack[top];
+			stack[top +1 ] = stack[top];
 			top++;
 			break;
 		} // switch

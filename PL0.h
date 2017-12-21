@@ -1,6 +1,7 @@
+
 #include <stdio.h>
 
-#define NRW        14     // number of reserved words
+#define NRW        18     // number of reserved words
 #define TXMAX      500    // length of identifier table
 #define MAXNUMLEN  14     // maximum number of digits in numbers
 #define NSYM       18     // maximum number of symbols in array ssym and csym
@@ -73,7 +74,7 @@ enum idtype
 
 enum opcode
 {
-	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC, EXT, POP, DIP, LDA, STA, PRT,RDM
+	LIT, OPR, LOD, STO, CAL, INT, JMP, JPC, EXT, POP, DIP, LDA, STA, PRT, RDM,CPY
 };
 
 enum oprcode
@@ -192,10 +193,10 @@ char csym[NSYM + 1] =
 	' ', '+', '-', '*', '/', '(', ')', '=', ',', '.', ';','^','%','~','[',']','{','}',':'
 };
 
-#define MAXINS   14
+#define MAXINS   15
 const char* mnemonic[MAXINS] =
 {
-	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP", "DIP", "LDA", "STA", "PRT"
+	"LIT", "OPR", "LOD", "STO", "CAL", "INT", "JMP", "JPC", "EXT", "POP", "DIP", "LDA", "STA", "PRT","CPY"
 };
 
 int *td;   //temporary dimensions
