@@ -1556,7 +1556,7 @@ void statement(symset fsys)
 		}
 		nul.l = 0;
 		nul.f = 0;
-		nul.a=0;
+		nul.a = 0;
 		int gen_cx;
 		int stmt_cx;
 		int cx1, cx2;
@@ -1607,14 +1607,14 @@ void statement(symset fsys)
 			}
 		}
 		for (int i = tmp_cx;i < 4 * case_num + tmp_cx;i++) {
-				if (code[i].a == JPC) {
-					int tmp = 4 * (case_num + tmp_cx - i - 1);
-					code[i].l = code[i].l + tmp;
-				}
-
+			if (code[i].a == JPC) {
+				int tmp = 4 * (case_num + tmp_cx - i - 1);
+				code[i].l = code[i].l + tmp;
 			}
-		for (i = 0;tmp_stk[i].f==0;i++);
-		for (;tmp_stk[i].f!= 0;i++) {
+
+		}
+		for (i = 0;tmp_stk[i].f == 0;i++);
+		for (;tmp_stk[i].f != 0;i++) {
 			code[cx] = tmp_stk[i];
 			cx++;
 		}
@@ -2031,7 +2031,7 @@ void interpret()
 			top++;
 			break;
 		case CPY://copy the value of stack[top]
-			stack[top +1 ] = stack[top];
+			stack[top + 1] = stack[top];
 			top++;
 			break;
 		} // switch
@@ -2102,6 +2102,7 @@ int main()
 	else
 		printf("There are %d error(s) in PL/0 program.\n", err);
 	//listcode(0, cx);
+	system("pause");
 } // main
 
   //////////////////////////////////////////////////////////////////////
