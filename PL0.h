@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 
-#define NRW        18     // number of reserved words
+#define NRW        17     // number of reserved words
 #define TXMAX      500    // length of identifier table
 #define MAXNUMLEN  14     // maximum number of digits in numbers
 #define NSYM       18     // maximum number of symbols in array ssym and csym
@@ -138,12 +138,12 @@ const char* err_msg[] =
 	/* 37 */    "Too many dimensions.",
 	/* 38 */    "'{' expected.",
 	/* 39 */    "Initializers expected.",
-	/*38*/		 "There must be an identifier to follow the 'switch'.",
-	/*39*/		"'{' expected.",
-	/*40*/		"'case' expected.",
-	/*41*/		"There must be a number to follow 'case'.",
-	/*42*/		"':' expected.",
-	/*43*/		"Expecting a condition to exit."
+	/*40*/		 "There must be a expression to follow the 'switch'.",
+	/*41*/		"'{' expected.",
+	/*42*/		"'case' expected.",
+	/*43*/		"There must be a number to follow 'case'.",
+	/*44*/		"':' expected.",
+	/*45*/		"Expecting a condition to exit."
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -178,7 +178,7 @@ int wsym[NRW + 1] =
 {
 	SYM_NULL, SYM_BEGIN, SYM_CALL, SYM_CONST, SYM_END,
 	SYM_IF, SYM_PROCEDURE, SYM_VAR, SYM_WHILE, SYM_ELSE, SYM_DO,
-	SYM_EXIT, SYM_FOR, SYM_RET, SYM_PRINT,SYM_RDM,SYM_END,SYM_SWITCH,SYM_CASE
+	SYM_EXIT, SYM_FOR, SYM_RET, SYM_PRINT,SYM_RDM,SYM_SWITCH,SYM_CASE
 };
 
 int ssym[NSYM + 1] =
