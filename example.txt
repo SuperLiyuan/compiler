@@ -1,0 +1,18 @@
+var i,j;
+procedure p(k,h)
+{
+  return k+2-h;
+};
+
+var k[5][6];
+
+{
+  for(i:=0;i<5;i:=i+1) 
+  {
+    for(j:=0;j<6;j:=j+1)
+    {
+      k[i][j] := 5+7;
+    }
+  }
+  i := p(k[3][5],j);
+}.
